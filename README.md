@@ -1,5 +1,5 @@
 <h1 align="center">
-  <code>@kolega/cli</code>
+  <code>@kolegaai/cli</code>
 </h1>
 
 <p align="center">
@@ -25,7 +25,7 @@ This CLI gives you full access to the Kolega.dev API from your terminal: trigger
 ## Install
 
 ```sh
-npm install -g @kolega/cli
+npm install -g @kolegaai/cli
 ```
 
 Requires **Node 22** or later.
