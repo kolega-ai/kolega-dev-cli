@@ -1,0 +1,12 @@
+src/
+test/
+scripts/
+openapi.json
+tsconfig.json
+eslint.config.js
+.prettierrc
+.prettierignore
+.gitignore
+coverage/
+.github/
+vitest.config.ts

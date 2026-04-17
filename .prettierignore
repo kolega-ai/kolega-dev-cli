@@ -1,0 +1,5 @@
+dist/
+node_modules/
+coverage/
+src/api/openapi-types.generated.ts
+openapi.json
