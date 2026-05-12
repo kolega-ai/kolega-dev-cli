@@ -3,6 +3,12 @@
 </h1>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@kolegaai/cli">
+    <img src="https://img.shields.io/npm/v/%40kolegaai%2Fcli.svg" alt="npm version">
+  </a>
+</p>
+
+<p align="center">
   <strong>The official CLI for <a href="https://kolega.dev">Kolega.dev</a></strong><br>
   Find and fix security vulnerabilities before they ship.
 </p>
