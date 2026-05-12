@@ -92,7 +92,7 @@ kolega apps get <application-id>
 
 ```sh
 kolega scans list <app-id> [--scan-type <type>] [--status <s>]
-kolega scans start <app-id> --type <secrets|semgrep|deep-ai> [--wait]
+kolega scans start <app-id> --type <secrets|semgrep|deep-ai|sbom> [--wait]
 kolega scans get <app-id> <scan-id>
 kolega scans progress <app-id> <scan-id> [--watch] [--interval <sec>]
 kolega scans results <app-id> <scan-id>
