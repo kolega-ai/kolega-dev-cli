@@ -1,23 +1,33 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Command } from "commander";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher } from "undici";
 
 import { ApiClient, ApiError, buildUserAgent } from "../../src/api/client.js";
 import { getQuotaBalance } from "../../src/api/quotas.js";
 import { startScan } from "../../src/api/scans.js";
+import { registerScansCommands } from "../../src/commands/scans.js";
 
 const BASE = "https://api.example.test";
 let mockAgent: MockAgent;
 const origDispatcher = getGlobalDispatcher();
+const origToken = process.env.KOLEGA_TOKEN;
 
 beforeEach(() => {
   mockAgent = new MockAgent();
   mockAgent.disableNetConnect();
   setGlobalDispatcher(mockAgent);
+  process.env.KOLEGA_TOKEN = "kcp_live_test";
 });
 
 afterEach(async () => {
+  if (origToken === undefined) {
+    delete process.env.KOLEGA_TOKEN;
+  } else {
+    process.env.KOLEGA_TOKEN = origToken;
+  }
   await mockAgent.close();
   setGlobalDispatcher(origDispatcher);
+  vi.restoreAllMocks();
 });
 
 function makeClient(): ApiClient {
@@ -26,6 +36,17 @@ function makeClient(): ApiClient {
     token: "kcp_live_test",
     userAgent: buildUserAgent("0.1.0"),
   });
+}
+
+function makeProgram(): Command {
+  const program = new Command();
+  program
+    .name("kolega")
+    .exitOverride()
+    .option("--api-url <url>", "override the API base URL")
+    .option("--json", "emit raw JSON to stdout instead of a formatted table");
+  registerScansCommands(program, "0.1.0");
+  return program;
 }
 
 describe("scans API wrappers", () => {
@@ -100,5 +121,87 @@ describe("scans API wrappers", () => {
     const batch = await startScan(client, "app-1", { scan_type: "secrets_scan" });
     expect(batch.batch_id).toBe("batch-123");
     expect(batch.status).toBe("queued");
+  });
+
+  it("maps the sbom CLI alias to sbom_scan and checks SAST quota", async () => {
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/quotas/balance", method: "GET" })
+      .reply(200, {
+        period_start: "2026-04-01T00:00:00Z",
+        period_end: "2026-05-01T00:00:00Z",
+        prs: { plan: 0, topup: 0, used: 0, remaining: 0 },
+        sast_scans: { plan: 100, topup: 0, used: 42, remaining: 58 },
+        deep_ai_scans: { plan: 0, topup: 0, used: 0, remaining: 0 },
+        applications: { max: null, current: 1 },
+      });
+    mockAgent
+      .get(BASE)
+      .intercept({
+        path: "/api/v1/applications/app-1/scans",
+        method: "POST",
+      })
+      .reply((req) => {
+        expect(JSON.parse(String(req.body))).toEqual({ scan_type: "sbom_scan" });
+        return {
+          statusCode: 202,
+          data: JSON.stringify({
+            batch_id: "batch-sbom",
+            application_id: "app-1",
+            scan_type: "sbom_scan",
+            status: "queued",
+            total_repositories: 1,
+            scans_created: 1,
+            scans_failed: 0,
+            scans_completed: 0,
+            scans_assessed: 0,
+            created_at: "2026-04-15T10:00:00Z",
+          }),
+          responseOptions: { headers: { "content-type": "application/json" } },
+        };
+      });
+
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await makeProgram().parseAsync([
+      "node",
+      "kolega",
+      "--api-url",
+      BASE,
+      "--json",
+      "scans",
+      "start",
+      "app-1",
+      "--type",
+      "sbom",
+    ]);
+
+    expect(stdoutWrite).toHaveBeenCalled();
+    mockAgent.assertNoPendingInterceptors();
+  });
+
+  it("reports the expanded scan type list for unknown scan types", async () => {
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`process.exit:${code ?? ""}`);
+    });
+
+    await expect(
+      makeProgram().parseAsync([
+        "node",
+        "kolega",
+        "--api-url",
+        BASE,
+        "scans",
+        "start",
+        "app-1",
+        "--type",
+        "unknown",
+      ]),
+    ).rejects.toThrow("process.exit:1");
+
+    expect(stderrWrite.mock.calls.join("")).toContain(
+      "Expected one of: secrets|semgrep|deep-ai|sbom.",
+    );
   });
 });

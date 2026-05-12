@@ -41,6 +41,7 @@ export const SCAN_TYPES: readonly ScanType[] = [
   "secrets_scan",
   "semgrep_scan",
   "deep_ai_scan",
+  "sbom_scan",
 ] as const;
 
 export const FINDING_STATUSES: readonly FindingStatus[] = [

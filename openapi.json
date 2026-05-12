@@ -1918,6 +1918,17 @@
           "commit_sha": {
             "type": "string",
             "title": "Commit Sha"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -3274,7 +3285,13 @@
           "fingerprint": {
             "type": "string",
             "title": "Fingerprint",
-            "description": "Hash for deduplication (check_id + file_path + app_id)"
+            "description": "Hash for deduplication"
+          },
+          "fingerprint_version": {
+            "type": "integer",
+            "title": "Fingerprint Version",
+            "description": "Fingerprint format version",
+            "default": 1
           },
           "application_id": {
             "type": "string",
@@ -3285,6 +3302,54 @@
             "type": "string",
             "title": "Organization Id",
             "description": "Organization for access control"
+          },
+          "repository_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Provider",
+            "description": "Git provider for the repository"
+          },
+          "repository_instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Instance",
+            "description": "Git provider instance hostname"
+          },
+          "repository_full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Full Name",
+            "description": "Repository full name for this finding"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "description": "Branch this finding identity belongs to"
           },
           "check_id": {
             "type": "string",
@@ -4177,7 +4242,8 @@
           "fix_started",
           "fix_completed",
           "fix_failed",
-          "fix_pr_created"
+          "fix_pr_created",
+          "fix_pr_updated"
         ],
         "title": "FindingEventType",
         "description": "Types of finding audit events."
@@ -4423,7 +4489,13 @@
           "fingerprint": {
             "type": "string",
             "title": "Fingerprint",
-            "description": "Hash for deduplication (check_id + file_path + app_id)"
+            "description": "Hash for deduplication"
+          },
+          "fingerprint_version": {
+            "type": "integer",
+            "title": "Fingerprint Version",
+            "description": "Fingerprint format version",
+            "default": 1
           },
           "application_id": {
             "type": "string",
@@ -4434,6 +4506,54 @@
             "type": "string",
             "title": "Organization Id",
             "description": "Organization for access control"
+          },
+          "repository_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Provider",
+            "description": "Git provider for the repository"
+          },
+          "repository_instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Instance",
+            "description": "Git provider instance hostname"
+          },
+          "repository_full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Full Name",
+            "description": "Repository full name for this finding"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "description": "Branch this finding identity belongs to"
           },
           "check_id": {
             "type": "string",
@@ -5325,6 +5445,25 @@
             "description": "Whether PR creation is in progress",
             "default": false
           },
+          "regeneration_pending": {
+            "type": "boolean",
+            "title": "Regeneration Pending",
+            "description": "Whether fix regeneration is in progress",
+            "default": false
+          },
+          "pr_update_pending": {
+            "type": "boolean",
+            "title": "Pr Update Pending",
+            "description": "Whether an existing PR update is in progress",
+            "default": false
+          },
+          "current_generation_attempt": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Current Generation Attempt",
+            "description": "Current fix generation attempt",
+            "default": 1
+          },
           "created_by": {
             "type": "string",
             "title": "Created By",
@@ -5360,6 +5499,19 @@
             ],
             "title": "Completed At",
             "description": "When the fix completed"
+          },
+          "last_regenerated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Regenerated At",
+            "description": "When the fix was last regenerated"
           },
           "archived": {
             "type": "boolean",
@@ -5411,7 +5563,8 @@
           "running",
           "completed",
           "failed",
-          "pr_creation_failed"
+          "pr_creation_failed",
+          "pr_update_failed"
         ],
         "title": "FixStatus",
         "description": "Status of a fix."
@@ -6254,6 +6407,182 @@
         ],
         "title": "LeadQuestionnaireSubmit",
         "description": "Request body for submitting questionnaire answers."
+      },
+      "LicenseAction": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "review",
+          "deny"
+        ],
+        "title": "LicenseAction",
+        "description": "Outcome of evaluating a component against a LicensePolicy."
+      },
+      "LicenseEvidence": {
+        "type": "string",
+        "enum": [
+          "declared",
+          "concluded",
+          "unknown"
+        ],
+        "title": "LicenseEvidence",
+        "description": "How the license assignment for a component was determined."
+      },
+      "LicensePolicy": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organisation this policy applies to"
+          },
+          "allow": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allow",
+            "description": "SPDX IDs that pass the policy"
+          },
+          "review": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Review",
+            "description": "SPDX IDs that require human review"
+          },
+          "deny": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deny",
+            "description": "SPDX IDs that violate the policy"
+          },
+          "unknown_action": {
+            "$ref": "#/components/schemas/LicenseAction",
+            "description": "What to do for components whose license cannot be determined",
+            "default": "review"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id"
+        ],
+        "title": "LicensePolicy",
+        "description": "Per-organisation policy for license-based finding emission."
+      },
+      "LicensePolicyUpdate": {
+        "properties": {
+          "allow": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allow"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review"
+          },
+          "deny": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deny"
+          },
+          "unknown_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LicenseAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "LicensePolicyUpdate",
+        "description": "Mutable subset of LicensePolicy used for PUT requests."
+      },
+      "LicenseRef": {
+        "properties": {
+          "spdx_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spdx Id",
+            "description": "Canonical SPDX identifier when parseable"
+          },
+          "raw": {
+            "type": "string",
+            "title": "Raw",
+            "description": "Original license expression as emitted by Syft"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "License URL if provided by the package metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "raw"
+        ],
+        "title": "LicenseRef",
+        "description": "A single license attached to a component.\n\n`spdx_id` is the canonical SPDX identifier when we can parse one out of\nthe raw expression; otherwise None and consumers should fall back to `raw`."
       },
       "LinkPRRequest": {
         "properties": {
@@ -7936,6 +8265,12 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "onboarding_complete": {
+            "type": "boolean",
+            "title": "Onboarding Complete",
+            "description": "Whether the current user has completed onboarding",
+            "default": false
           }
         },
         "type": "object",
@@ -8224,6 +8559,12 @@
             "title": "Trial Eligible",
             "description": "Whether this org is eligible for a free trial",
             "default": true
+          },
+          "is_public_demo": {
+            "type": "boolean",
+            "title": "Is Public Demo",
+            "description": "If True, any authenticated user gets implicit viewer access to showcase the product",
+            "default": false
           },
           "member_count": {
             "anyOf": [
@@ -9679,6 +10020,101 @@
         "title": "PublicScanCreateRequest",
         "description": "Request body for ``POST /api/v1/applications/{application_id}/scans``."
       },
+      "PublicScanEngineStatus": {
+        "properties": {
+          "scan_type": {
+            "type": "string",
+            "title": "Scan Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "commit_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Hash"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "fresh": {
+            "type": "boolean",
+            "title": "Fresh",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_type",
+          "status"
+        ],
+        "title": "PublicScanEngineStatus",
+        "description": "Public-safe scan coverage for one engine on one repository."
+      },
+      "PublicScanFindingStatusCounts": {
+        "properties": {
+          "open": {
+            "type": "integer",
+            "title": "Open",
+            "default": 0
+          },
+          "needs_manual_review": {
+            "type": "integer",
+            "title": "Needs Manual Review",
+            "default": 0
+          },
+          "resolved": {
+            "type": "integer",
+            "title": "Resolved",
+            "default": 0
+          },
+          "ignored": {
+            "type": "integer",
+            "title": "Ignored",
+            "default": 0
+          },
+          "false_positive": {
+            "type": "integer",
+            "title": "False Positive",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "PublicScanFindingStatusCounts",
+        "description": "Finding counts grouped by finding status."
+      },
       "PublicScanFindingSummary": {
         "properties": {
           "check_id": {
@@ -9726,6 +10162,252 @@
         ],
         "title": "PublicScanFindingSummary",
         "description": "Lightweight finding summary used in ``GET /api/v1/scans/{id}/results``."
+      },
+      "PublicScanPage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "project_slug": {
+            "type": "string",
+            "title": "Project Slug"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_public": {
+            "type": "boolean",
+            "title": "Is Public",
+            "default": false
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicScanPageSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "application_id",
+          "project_slug",
+          "display_name",
+          "created_by"
+        ],
+        "title": "PublicScanPage",
+        "description": "Persisted settings and latest snapshot for a public scan page."
+      },
+      "PublicScanPageResponse": {
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PublicScanPage"
+          },
+          "organization_slug": {
+            "type": "string",
+            "title": "Organization Slug"
+          },
+          "public_url": {
+            "type": "string",
+            "title": "Public Url"
+          },
+          "badge_url": {
+            "type": "string",
+            "title": "Badge Url"
+          },
+          "badge_markdown": {
+            "type": "string",
+            "title": "Badge Markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "organization_slug",
+          "public_url",
+          "badge_url",
+          "badge_markdown"
+        ],
+        "title": "PublicScanPageResponse",
+        "description": "Authenticated management response for a public scan page."
+      },
+      "PublicScanPageSnapshot": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/PublicScanStatus",
+            "default": "unknown"
+          },
+          "status_reason": {
+            "type": "string",
+            "title": "Status Reason",
+            "default": "Scan status has not been evaluated"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "freshness_days": {
+            "type": "integer",
+            "title": "Freshness Days",
+            "default": 7
+          },
+          "stale_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Stale At"
+          },
+          "required_scan_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Scan Types"
+          },
+          "actionable_findings_count": {
+            "type": "integer",
+            "title": "Actionable Findings Count",
+            "default": 0
+          },
+          "findings_by_severity": {
+            "$ref": "#/components/schemas/PublicScanSeverityCounts"
+          },
+          "findings_by_status": {
+            "$ref": "#/components/schemas/PublicScanFindingStatusCounts"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/PublicScanRepositoryStatus"
+            },
+            "type": "array",
+            "title": "Repositories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stale_at"
+        ],
+        "title": "PublicScanPageSnapshot",
+        "description": "Cached public-safe status snapshot."
+      },
+      "PublicScanPageUpdate": {
+        "properties": {
+          "project_slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Slug"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_public": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Public"
+          }
+        },
+        "type": "object",
+        "title": "PublicScanPageUpdate",
+        "description": "Settings update for a public scan page."
       },
       "PublicScanProgressRepository": {
         "properties": {
@@ -9898,6 +10580,120 @@
         "title": "PublicScanProgressResponse",
         "description": "Batch-level progress + per-repository breakdown. The primary polling\nendpoint for CLI clients running a live progress view."
       },
+      "PublicScanProjectResponse": {
+        "properties": {
+          "organization_slug": {
+            "type": "string",
+            "title": "Organization Slug"
+          },
+          "project_slug": {
+            "type": "string",
+            "title": "Project Slug"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_public": {
+            "type": "boolean",
+            "title": "Is Public"
+          },
+          "public_url": {
+            "type": "string",
+            "title": "Public Url"
+          },
+          "badge_url": {
+            "type": "string",
+            "title": "Badge Url"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/PublicScanPageSnapshot"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_slug",
+          "project_slug",
+          "display_name",
+          "is_public",
+          "public_url",
+          "badge_url",
+          "snapshot",
+          "updated_at"
+        ],
+        "title": "PublicScanProjectResponse",
+        "description": "Unauthenticated public response for a published scan page."
+      },
+      "PublicScanRepositoryStatus": {
+        "properties": {
+          "repository": {
+            "type": "string",
+            "title": "Repository"
+          },
+          "repository_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Url"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "github"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "scans": {
+            "items": {
+              "$ref": "#/components/schemas/PublicScanEngineStatus"
+            },
+            "type": "array",
+            "title": "Scans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repository",
+          "branch"
+        ],
+        "title": "PublicScanRepositoryStatus",
+        "description": "Public-safe status for a repository in an application."
+      },
       "PublicScanResultsResponse": {
         "properties": {
           "batch_id": {
@@ -9934,6 +10730,48 @@
         ],
         "title": "PublicScanResultsResponse",
         "description": "Aggregated results from every repository scan in a batch.\n\nIndividual per-repository results are no longer part of the public\ncontract — a consumer that wants to slice by repo should query\n``GET /findings?scan_batch_id=…`` (once that filter is exposed) or the\n``/progress`` endpoint on the batch."
+      },
+      "PublicScanSeverityCounts": {
+        "properties": {
+          "critical": {
+            "type": "integer",
+            "title": "Critical",
+            "default": 0
+          },
+          "high": {
+            "type": "integer",
+            "title": "High",
+            "default": 0
+          },
+          "medium": {
+            "type": "integer",
+            "title": "Medium",
+            "default": 0
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "PublicScanSeverityCounts",
+        "description": "Finding counts grouped by severity."
+      },
+      "PublicScanStatus": {
+        "type": "string",
+        "enum": [
+          "passing",
+          "failing",
+          "unknown"
+        ],
+        "title": "PublicScanStatus",
+        "description": "Publicly displayed security status."
       },
       "QuotaBalanceResponse": {
         "properties": {
@@ -10399,6 +11237,472 @@
         "title": "SandboxNetworkAccess",
         "description": "Network access configuration for E2B sandboxes."
       },
+      "Sbom": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique SBOM identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization for access control"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id",
+            "description": "Application this SBOM was generated for"
+          },
+          "repository_full_name": {
+            "type": "string",
+            "title": "Repository Full Name",
+            "description": "e.g., 'owner/repo'"
+          },
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id",
+            "description": "Scan that produced this SBOM"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id",
+            "description": "Batch the producing scan belongs to"
+          },
+          "git_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Ref",
+            "description": "Commit SHA at scan time"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "description": "Branch the SBOM was generated from"
+          },
+          "format": {
+            "type": "string",
+            "const": "cyclonedx-json",
+            "title": "Format",
+            "description": "Source format of the raw artifact",
+            "default": "cyclonedx-json"
+          },
+          "spec_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec Version",
+            "description": "CycloneDX spec version, e.g. '1.5'"
+          },
+          "tool_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Tool Versions",
+            "description": "Generator versions, e.g. {'syft': '1.x', 'grype': '0.y'}"
+          },
+          "component_count": {
+            "type": "integer",
+            "title": "Component Count",
+            "description": "Total number of components in this SBOM",
+            "default": 0
+          },
+          "license_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "License Summary",
+            "description": "License counts by SPDX id (or 'UNKNOWN'), e.g. {'MIT': 142, 'Apache-2.0': 33, 'UNKNOWN': 4}"
+          },
+          "vulnerability_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Vulnerability Summary",
+            "description": "Vulnerability counts by severity, e.g. {'critical': 1, 'high': 4, ...}"
+          },
+          "raw_blob_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Blob Ref",
+            "description": "GridFS file id (in 'sbom_artifacts' bucket) for the full CycloneDX document"
+          },
+          "previous_sbom_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Sbom Id",
+            "description": "Most recent prior SBOM for the same (app, repo)"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SbomDiff"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Drift vs previous_sbom_id; None on first scan"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "application_id",
+          "repository_full_name",
+          "scan_id"
+        ],
+        "title": "Sbom",
+        "description": "A versioned SBOM artifact tied to a single Scan run."
+      },
+      "SbomComponent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sbom_id": {
+            "type": "string",
+            "title": "Sbom Id",
+            "description": "Parent SBOM"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Denormalised for access-control queries"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id",
+            "description": "Denormalised for org/app-scoped queries"
+          },
+          "purl": {
+            "type": "string",
+            "title": "Purl",
+            "description": "Canonical Package URL, e.g. pkg:npm/lodash@4.17.21"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Component name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Component version (may be empty for unversioned components)",
+            "default": ""
+          },
+          "ecosystem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ecosystem",
+            "description": "npm | pypi | maven | go | cargo | composer | gem | ..."
+          },
+          "licenses": {
+            "items": {
+              "$ref": "#/components/schemas/LicenseRef"
+            },
+            "type": "array",
+            "title": "Licenses"
+          },
+          "license_evidence": {
+            "$ref": "#/components/schemas/LicenseEvidence",
+            "default": "declared"
+          },
+          "cves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cves",
+            "description": "CVE / GHSA IDs from Grype matching"
+          },
+          "vuln_severities": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Vuln Severities",
+            "description": "Per-component vuln counts by severity, e.g. {'high': 1}"
+          },
+          "direct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direct",
+            "description": "True if top-level dep, False if transitive, None if unknown"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint",
+            "description": "hash(sbom_id, purl) — uniqueness key inside an SBOM"
+          },
+          "extra": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extra",
+            "description": "Raw passthrough fields for debugging"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sbom_id",
+          "organization_id",
+          "application_id",
+          "purl",
+          "name",
+          "fingerprint"
+        ],
+        "title": "SbomComponent",
+        "description": "A single component (package) entry inside an SBOM."
+      },
+      "SbomComponentListResponse": {
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/SbomComponent"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "components",
+          "total"
+        ],
+        "title": "SbomComponentListResponse"
+      },
+      "SbomDiff": {
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added",
+            "description": "purls newly present in this SBOM"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed",
+            "description": "purls present in previous but absent here"
+          },
+          "upgraded": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Upgraded",
+            "description": "Version bumps as [{'name': str, 'purl_old': purl, 'purl_new': purl}]"
+          }
+        },
+        "type": "object",
+        "title": "SbomDiff",
+        "description": "Drift between this SBOM and the previous SBOM for the same (application, repo)."
+      },
+      "SbomDiffResponse": {
+        "properties": {
+          "sbom_id": {
+            "type": "string",
+            "title": "Sbom Id"
+          },
+          "other_sbom_id": {
+            "type": "string",
+            "title": "Other Sbom Id"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/SbomDiff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sbom_id",
+          "other_sbom_id",
+          "diff"
+        ],
+        "title": "SbomDiffResponse"
+      },
+      "SbomListEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "repository_full_name": {
+            "type": "string",
+            "title": "Repository Full Name"
+          },
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "git_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Ref"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch"
+          },
+          "component_count": {
+            "type": "integer",
+            "title": "Component Count"
+          },
+          "vulnerability_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Vulnerability Summary"
+          },
+          "license_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "License Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "has_diff": {
+            "type": "boolean",
+            "title": "Has Diff",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "repository_full_name",
+          "scan_id",
+          "component_count",
+          "vulnerability_summary",
+          "license_summary",
+          "created_at"
+        ],
+        "title": "SbomListEntry",
+        "description": "Lightweight SBOM summary for list endpoints."
+      },
+      "SbomListResponse": {
+        "properties": {
+          "sboms": {
+            "items": {
+              "$ref": "#/components/schemas/SbomListEntry"
+            },
+            "type": "array",
+            "title": "Sboms"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sboms",
+          "total"
+        ],
+        "title": "SbomListResponse"
+      },
       "Scan": {
         "properties": {
           "id": {
@@ -10450,7 +11754,7 @@
           },
           "scan_type": {
             "$ref": "#/components/schemas/ScanType",
-            "description": "Type of scan: SECRETS_SCAN, SEMGREP_SCAN, or DEEP_AI_SCAN"
+            "description": "Type of scan: SECRETS_SCAN, SEMGREP_SCAN, DEEP_AI_SCAN, or SBOM_SCAN"
           },
           "metadata": {
             "additionalProperties": true,
@@ -10936,6 +12240,39 @@
         "title": "ScanBatchWithBreakdown",
         "description": "ScanBatch with computed status breakdown for API responses.\n\nExtends ScanBatch with a status_breakdown field containing scan counts by status.\nUsed in list views to show batch progress without fetching all scans."
       },
+      "ScanBranchOverrideRequest": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "github",
+              "gitlab",
+              "azure_devops"
+            ],
+            "title": "Provider"
+          },
+          "repository_full_name": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Repository Full Name"
+          },
+          "branch": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Branch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "repository_full_name",
+          "branch"
+        ],
+        "title": "ScanBranchOverrideRequest",
+        "description": "Run-scoped branch selection for one repository in a manual scan."
+      },
       "ScanCostSummary": {
         "properties": {
           "scan_id": {
@@ -11055,6 +12392,29 @@
           },
           "scan_type": {
             "$ref": "#/components/schemas/ScanType"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "onboarding"
+            ],
+            "title": "Source",
+            "default": "manual"
+          },
+          "branch_overrides": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ScanBranchOverrideRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Overrides"
           }
         },
         "type": "object",
@@ -11285,7 +12645,8 @@
         "enum": [
           "secrets_scan",
           "semgrep_scan",
-          "deep_ai_scan"
+          "deep_ai_scan",
+          "sbom_scan"
         ],
         "title": "ScanType",
         "description": "Available scan types for repository security scanning."

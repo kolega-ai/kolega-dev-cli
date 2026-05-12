@@ -37,6 +37,8 @@ interface ProgressOpts {
   interval?: string;
 }
 
+const SCAN_TYPE_HELP = "secrets|semgrep|deep-ai|sbom";
+
 const CLI_SCAN_TYPE_MAP: Record<string, ScanType> = {
   secrets: "secrets_scan",
   secrets_scan: "secrets_scan",
@@ -45,12 +47,15 @@ const CLI_SCAN_TYPE_MAP: Record<string, ScanType> = {
   "deep-ai": "deep_ai_scan",
   deep_ai: "deep_ai_scan",
   deep_ai_scan: "deep_ai_scan",
+  sbom: "sbom_scan",
+  sbom_scan: "sbom_scan",
 };
 
 const QUOTA_COUNTER_FOR_SCAN: Record<ScanType, "sast_scans" | "deep_ai_scans"> = {
   secrets_scan: "sast_scans",
   semgrep_scan: "sast_scans",
   deep_ai_scan: "deep_ai_scans",
+  sbom_scan: "sast_scans",
 };
 
 export function registerScansCommands(program: Command, pkgVersion: string): void {
@@ -59,7 +64,7 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
   scans
     .command("list <application-id>")
     .description("List scan batches for an application")
-    .option("--scan-type <type>", "filter by scan type (secrets|semgrep|deep-ai)")
+    .option("--scan-type <type>", `filter by scan type (${SCAN_TYPE_HELP})`)
     .option("--status <status>", "filter by status")
     .option("--limit <n>", "page size", "50")
     .option("--skip <n>", "number of items to skip", "0")
@@ -87,7 +92,7 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
   scans
     .command("start <application-id>")
     .description("Trigger a security scan")
-    .requiredOption("--type <type>", "scan type: secrets|semgrep|deep-ai")
+    .requiredOption("--type <type>", `scan type: ${SCAN_TYPE_HELP}`)
     .option("--wait", "block and stream progress until the scan is terminal")
     .option("--no-quota-check", "skip the pre-flight quota check")
     .action(async (applicationId: string, opts: StartOpts, cmd) => {
@@ -206,7 +211,7 @@ function toScanType(input: string): ScanType {
   if ((SCAN_TYPES as readonly string[]).includes(normalized)) {
     return normalized as ScanType;
   }
-  throw new Error(`Unknown scan type "${input}". Expected one of: secrets, semgrep, deep-ai.`);
+  throw new Error(`Unknown scan type "${input}". Expected one of: ${SCAN_TYPE_HELP}.`);
 }
 
 async function assertQuotaAvailable(client: ApiClient, scanType: ScanType): Promise<void> {

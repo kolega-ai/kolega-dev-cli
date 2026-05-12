@@ -738,6 +738,8 @@ export interface components {
             name: string;
             /** Commit Sha */
             commit_sha: string;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** AzureDevOpsConnectRequest */
         AzureDevOpsConnectRequest: {
@@ -1374,9 +1376,15 @@ export interface components {
             id?: string;
             /**
              * Fingerprint
-             * @description Hash for deduplication (check_id + file_path + app_id)
+             * @description Hash for deduplication
              */
             fingerprint: string;
+            /**
+             * Fingerprint Version
+             * @description Fingerprint format version
+             * @default 1
+             */
+            fingerprint_version: number;
             /**
              * Application Id
              * @description Application this finding belongs to
@@ -1387,6 +1395,26 @@ export interface components {
              * @description Organization for access control
              */
             organization_id: string;
+            /**
+             * Repository Provider
+             * @description Git provider for the repository
+             */
+            repository_provider?: string | null;
+            /**
+             * Repository Instance
+             * @description Git provider instance hostname
+             */
+            repository_instance?: string | null;
+            /**
+             * Repository Full Name
+             * @description Repository full name for this finding
+             */
+            repository_full_name?: string | null;
+            /**
+             * Branch
+             * @description Branch this finding identity belongs to
+             */
+            branch?: string | null;
             /**
              * Check Id
              * @description Rule/check identifier (e.g., semgrep rule ID)
@@ -1740,7 +1768,7 @@ export interface components {
          * @description Types of finding audit events.
          * @enum {string}
          */
-        FindingEventType: "detected" | "resolved_auto" | "resolved_manual" | "resolved_pr_merged" | "resolved_pr_linked" | "reopened" | "status_changed" | "fix_created" | "fix_started" | "fix_completed" | "fix_failed" | "fix_pr_created";
+        FindingEventType: "detected" | "resolved_auto" | "resolved_manual" | "resolved_pr_merged" | "resolved_pr_linked" | "reopened" | "status_changed" | "fix_created" | "fix_started" | "fix_completed" | "fix_failed" | "fix_pr_created" | "fix_pr_updated";
         /**
          * FindingFixSummary
          * @description Summary of fix status for a finding in list views.
@@ -1891,9 +1919,15 @@ export interface components {
             id?: string;
             /**
              * Fingerprint
-             * @description Hash for deduplication (check_id + file_path + app_id)
+             * @description Hash for deduplication
              */
             fingerprint: string;
+            /**
+             * Fingerprint Version
+             * @description Fingerprint format version
+             * @default 1
+             */
+            fingerprint_version: number;
             /**
              * Application Id
              * @description Application this finding belongs to
@@ -1904,6 +1938,26 @@ export interface components {
              * @description Organization for access control
              */
             organization_id: string;
+            /**
+             * Repository Provider
+             * @description Git provider for the repository
+             */
+            repository_provider?: string | null;
+            /**
+             * Repository Instance
+             * @description Git provider instance hostname
+             */
+            repository_instance?: string | null;
+            /**
+             * Repository Full Name
+             * @description Repository full name for this finding
+             */
+            repository_full_name?: string | null;
+            /**
+             * Branch
+             * @description Branch this finding identity belongs to
+             */
+            branch?: string | null;
             /**
              * Check Id
              * @description Rule/check identifier (e.g., semgrep rule ID)
@@ -2345,6 +2399,24 @@ export interface components {
              */
             pr_creation_pending: boolean;
             /**
+             * Regeneration Pending
+             * @description Whether fix regeneration is in progress
+             * @default false
+             */
+            regeneration_pending: boolean;
+            /**
+             * Pr Update Pending
+             * @description Whether an existing PR update is in progress
+             * @default false
+             */
+            pr_update_pending: boolean;
+            /**
+             * Current Generation Attempt
+             * @description Current fix generation attempt
+             * @default 1
+             */
+            current_generation_attempt: number;
+            /**
              * Created By
              * @description User ID of the creator
              */
@@ -2364,6 +2436,11 @@ export interface components {
              * @description When the fix completed
              */
             completed_at?: string | null;
+            /**
+             * Last Regenerated At
+             * @description When the fix was last regenerated
+             */
+            last_regenerated_at?: string | null;
             /**
              * Archived
              * @description Whether the fix is archived
@@ -2386,7 +2463,7 @@ export interface components {
          * @description Status of a fix.
          * @enum {string}
          */
-        FixStatus: "pending" | "running" | "completed" | "failed" | "pr_creation_failed";
+        FixStatus: "pending" | "running" | "completed" | "failed" | "pr_creation_failed" | "pr_update_failed";
         /**
          * FrameworkData
          * @description Data for a compliance framework.
@@ -2803,6 +2880,98 @@ export interface components {
              * @description Biggest security challenge (free text)
              */
             biggest_challenge?: string | null;
+        };
+        /**
+         * LicenseAction
+         * @description Outcome of evaluating a component against a LicensePolicy.
+         * @enum {string}
+         */
+        LicenseAction: "allow" | "review" | "deny";
+        /**
+         * LicenseEvidence
+         * @description How the license assignment for a component was determined.
+         * @enum {string}
+         */
+        LicenseEvidence: "declared" | "concluded" | "unknown";
+        /**
+         * LicensePolicy
+         * @description Per-organisation policy for license-based finding emission.
+         */
+        LicensePolicy: {
+            /** Id */
+            id?: string;
+            /**
+             * Organization Id
+             * @description Organisation this policy applies to
+             */
+            organization_id: string;
+            /**
+             * Allow
+             * @description SPDX IDs that pass the policy
+             */
+            allow?: string[];
+            /**
+             * Review
+             * @description SPDX IDs that require human review
+             */
+            review?: string[];
+            /**
+             * Deny
+             * @description SPDX IDs that violate the policy
+             */
+            deny?: string[];
+            /**
+             * @description What to do for components whose license cannot be determined
+             * @default review
+             */
+            unknown_action: components["schemas"]["LicenseAction"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * LicensePolicyUpdate
+         * @description Mutable subset of LicensePolicy used for PUT requests.
+         */
+        LicensePolicyUpdate: {
+            /** Allow */
+            allow?: string[] | null;
+            /** Review */
+            review?: string[] | null;
+            /** Deny */
+            deny?: string[] | null;
+            unknown_action?: components["schemas"]["LicenseAction"] | null;
+        };
+        /**
+         * LicenseRef
+         * @description A single license attached to a component.
+         *
+         *     `spdx_id` is the canonical SPDX identifier when we can parse one out of
+         *     the raw expression; otherwise None and consumers should fall back to `raw`.
+         */
+        LicenseRef: {
+            /**
+             * Spdx Id
+             * @description Canonical SPDX identifier when parseable
+             */
+            spdx_id?: string | null;
+            /**
+             * Raw
+             * @description Original license expression as emitted by Syft
+             */
+            raw: string;
+            /**
+             * Url
+             * @description License URL if provided by the package metadata
+             */
+            url?: string | null;
         };
         /**
          * LinkPRRequest
@@ -3584,6 +3753,12 @@ export interface components {
             organizations: components["schemas"]["OrganizationResponse"][];
             /** Total */
             total: number;
+            /**
+             * Onboarding Complete
+             * @description Whether the current user has completed onboarding
+             * @default false
+             */
+            onboarding_complete: boolean;
         };
         /**
          * OrganizationMemberResponse
@@ -3732,6 +3907,12 @@ export interface components {
              * @default true
              */
             trial_eligible: boolean;
+            /**
+             * Is Public Demo
+             * @description If True, any authenticated user gets implicit viewer access to showcase the product
+             * @default false
+             */
+            is_public_demo: boolean;
             /**
              * Member Count
              * @description Number of members in the organization
@@ -4331,6 +4512,63 @@ export interface components {
             scan_type: components["schemas"]["ScanType"];
         };
         /**
+         * PublicScanEngineStatus
+         * @description Public-safe scan coverage for one engine on one repository.
+         */
+        PublicScanEngineStatus: {
+            /** Scan Type */
+            scan_type: string;
+            /** Status */
+            status: string;
+            /** Commit Hash */
+            commit_hash?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Fresh
+             * @default false
+             */
+            fresh: boolean;
+            /** Message */
+            message?: string | null;
+        };
+        /**
+         * PublicScanFindingStatusCounts
+         * @description Finding counts grouped by finding status.
+         */
+        PublicScanFindingStatusCounts: {
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Needs Manual Review
+             * @default 0
+             */
+            needs_manual_review: number;
+            /**
+             * Resolved
+             * @default 0
+             */
+            resolved: number;
+            /**
+             * Ignored
+             * @default 0
+             */
+            ignored: number;
+            /**
+             * False Positive
+             * @default 0
+             */
+            false_positive: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
          * PublicScanFindingSummary
          * @description Lightweight finding summary used in ``GET /api/v1/scans/{id}/results``.
          */
@@ -4349,6 +4587,114 @@ export interface components {
             owasp?: string[];
             /** Fingerprint */
             fingerprint: string;
+        };
+        /**
+         * PublicScanPage
+         * @description Persisted settings and latest snapshot for a public scan page.
+         */
+        PublicScanPage: {
+            /** Id */
+            id?: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Application Id */
+            application_id: string;
+            /** Project Slug */
+            project_slug: string;
+            /** Display Name */
+            display_name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Is Public
+             * @default false
+             */
+            is_public: boolean;
+            snapshot?: components["schemas"]["PublicScanPageSnapshot"] | null;
+            /** Created By */
+            created_by: string;
+            /** Updated By */
+            updated_by?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * PublicScanPageResponse
+         * @description Authenticated management response for a public scan page.
+         */
+        PublicScanPageResponse: {
+            page: components["schemas"]["PublicScanPage"];
+            /** Organization Slug */
+            organization_slug: string;
+            /** Public Url */
+            public_url: string;
+            /** Badge Url */
+            badge_url: string;
+            /** Badge Markdown */
+            badge_markdown: string;
+        };
+        /**
+         * PublicScanPageSnapshot
+         * @description Cached public-safe status snapshot.
+         */
+        PublicScanPageSnapshot: {
+            /** @default unknown */
+            status: components["schemas"]["PublicScanStatus"];
+            /**
+             * Status Reason
+             * @default Scan status has not been evaluated
+             */
+            status_reason: string;
+            /**
+             * Evaluated At
+             * Format: date-time
+             */
+            evaluated_at?: string;
+            /**
+             * Freshness Days
+             * @default 7
+             */
+            freshness_days: number;
+            /**
+             * Stale At
+             * Format: date-time
+             */
+            stale_at: string;
+            /** Required Scan Types */
+            required_scan_types?: string[];
+            /**
+             * Actionable Findings Count
+             * @default 0
+             */
+            actionable_findings_count: number;
+            findings_by_severity?: components["schemas"]["PublicScanSeverityCounts"];
+            findings_by_status?: components["schemas"]["PublicScanFindingStatusCounts"];
+            /** Repositories */
+            repositories?: components["schemas"]["PublicScanRepositoryStatus"][];
+        };
+        /**
+         * PublicScanPageUpdate
+         * @description Settings update for a public scan page.
+         */
+        PublicScanPageUpdate: {
+            /** Project Slug */
+            project_slug?: string | null;
+            /** Display Name */
+            display_name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Is Public */
+            is_public?: boolean | null;
         };
         /**
          * PublicScanProgressRepository
@@ -4406,6 +4752,53 @@ export interface components {
             repositories?: components["schemas"]["PublicScanProgressRepository"][];
         };
         /**
+         * PublicScanProjectResponse
+         * @description Unauthenticated public response for a published scan page.
+         */
+        PublicScanProjectResponse: {
+            /** Organization Slug */
+            organization_slug: string;
+            /** Project Slug */
+            project_slug: string;
+            /** Display Name */
+            display_name: string;
+            /** Description */
+            description?: string | null;
+            /** Is Public */
+            is_public: boolean;
+            /** Public Url */
+            public_url: string;
+            /** Badge Url */
+            badge_url: string;
+            snapshot: components["schemas"]["PublicScanPageSnapshot"];
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * PublicScanRepositoryStatus
+         * @description Public-safe status for a repository in an application.
+         */
+        PublicScanRepositoryStatus: {
+            /** Repository */
+            repository: string;
+            /** Repository Url */
+            repository_url?: string | null;
+            /**
+             * Provider
+             * @default github
+             */
+            provider: string;
+            /** Branch */
+            branch: string;
+            /** Scans */
+            scans?: components["schemas"]["PublicScanEngineStatus"][];
+        };
+        /**
          * PublicScanResultsResponse
          * @description Aggregated results from every repository scan in a batch.
          *
@@ -4426,6 +4819,43 @@ export interface components {
             /** Findings */
             findings: components["schemas"]["PublicScanFindingSummary"][];
         };
+        /**
+         * PublicScanSeverityCounts
+         * @description Finding counts grouped by severity.
+         */
+        PublicScanSeverityCounts: {
+            /**
+             * Critical
+             * @default 0
+             */
+            critical: number;
+            /**
+             * High
+             * @default 0
+             */
+            high: number;
+            /**
+             * Medium
+             * @default 0
+             */
+            medium: number;
+            /**
+             * Low
+             * @default 0
+             */
+            low: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * PublicScanStatus
+         * @description Publicly displayed security status.
+         * @enum {string}
+         */
+        PublicScanStatus: "passing" | "failing" | "unknown";
         /** QuotaBalanceResponse */
         QuotaBalanceResponse: {
             /**
@@ -4663,6 +5093,278 @@ export interface components {
             allowed_hosts?: string[];
         };
         /**
+         * Sbom
+         * @description A versioned SBOM artifact tied to a single Scan run.
+         */
+        Sbom: {
+            /**
+             * Id
+             * @description Unique SBOM identifier
+             */
+            id?: string;
+            /**
+             * Organization Id
+             * @description Organization for access control
+             */
+            organization_id: string;
+            /**
+             * Application Id
+             * @description Application this SBOM was generated for
+             */
+            application_id: string;
+            /**
+             * Repository Full Name
+             * @description e.g., 'owner/repo'
+             */
+            repository_full_name: string;
+            /**
+             * Scan Id
+             * @description Scan that produced this SBOM
+             */
+            scan_id: string;
+            /**
+             * Batch Id
+             * @description Batch the producing scan belongs to
+             */
+            batch_id?: string | null;
+            /**
+             * Git Ref
+             * @description Commit SHA at scan time
+             */
+            git_ref?: string | null;
+            /**
+             * Branch
+             * @description Branch the SBOM was generated from
+             */
+            branch?: string | null;
+            /**
+             * Format
+             * @description Source format of the raw artifact
+             * @default cyclonedx-json
+             * @constant
+             */
+            format: "cyclonedx-json";
+            /**
+             * Spec Version
+             * @description CycloneDX spec version, e.g. '1.5'
+             */
+            spec_version?: string | null;
+            /**
+             * Tool Versions
+             * @description Generator versions, e.g. {'syft': '1.x', 'grype': '0.y'}
+             */
+            tool_versions?: {
+                [key: string]: string;
+            };
+            /**
+             * Component Count
+             * @description Total number of components in this SBOM
+             * @default 0
+             */
+            component_count: number;
+            /**
+             * License Summary
+             * @description License counts by SPDX id (or 'UNKNOWN'), e.g. {'MIT': 142, 'Apache-2.0': 33, 'UNKNOWN': 4}
+             */
+            license_summary?: {
+                [key: string]: number;
+            };
+            /**
+             * Vulnerability Summary
+             * @description Vulnerability counts by severity, e.g. {'critical': 1, 'high': 4, ...}
+             */
+            vulnerability_summary?: {
+                [key: string]: number;
+            };
+            /**
+             * Raw Blob Ref
+             * @description GridFS file id (in 'sbom_artifacts' bucket) for the full CycloneDX document
+             */
+            raw_blob_ref?: string | null;
+            /**
+             * Previous Sbom Id
+             * @description Most recent prior SBOM for the same (app, repo)
+             */
+            previous_sbom_id?: string | null;
+            /** @description Drift vs previous_sbom_id; None on first scan */
+            diff?: components["schemas"]["SbomDiff"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * SbomComponent
+         * @description A single component (package) entry inside an SBOM.
+         */
+        SbomComponent: {
+            /** Id */
+            id?: string;
+            /**
+             * Sbom Id
+             * @description Parent SBOM
+             */
+            sbom_id: string;
+            /**
+             * Organization Id
+             * @description Denormalised for access-control queries
+             */
+            organization_id: string;
+            /**
+             * Application Id
+             * @description Denormalised for org/app-scoped queries
+             */
+            application_id: string;
+            /**
+             * Purl
+             * @description Canonical Package URL, e.g. pkg:npm/lodash@4.17.21
+             */
+            purl: string;
+            /**
+             * Name
+             * @description Component name
+             */
+            name: string;
+            /**
+             * Version
+             * @description Component version (may be empty for unversioned components)
+             * @default
+             */
+            version: string;
+            /**
+             * Ecosystem
+             * @description npm | pypi | maven | go | cargo | composer | gem | ...
+             */
+            ecosystem?: string | null;
+            /** Licenses */
+            licenses?: components["schemas"]["LicenseRef"][];
+            /** @default declared */
+            license_evidence: components["schemas"]["LicenseEvidence"];
+            /**
+             * Cves
+             * @description CVE / GHSA IDs from Grype matching
+             */
+            cves?: string[];
+            /**
+             * Vuln Severities
+             * @description Per-component vuln counts by severity, e.g. {'high': 1}
+             */
+            vuln_severities?: {
+                [key: string]: number;
+            };
+            /**
+             * Direct
+             * @description True if top-level dep, False if transitive, None if unknown
+             */
+            direct?: boolean | null;
+            /**
+             * Fingerprint
+             * @description hash(sbom_id, purl) — uniqueness key inside an SBOM
+             */
+            fingerprint: string;
+            /**
+             * Extra
+             * @description Raw passthrough fields for debugging
+             */
+            extra?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+        };
+        /** SbomComponentListResponse */
+        SbomComponentListResponse: {
+            /** Components */
+            components: components["schemas"]["SbomComponent"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * SbomDiff
+         * @description Drift between this SBOM and the previous SBOM for the same (application, repo).
+         */
+        SbomDiff: {
+            /**
+             * Added
+             * @description purls newly present in this SBOM
+             */
+            added?: string[];
+            /**
+             * Removed
+             * @description purls present in previous but absent here
+             */
+            removed?: string[];
+            /**
+             * Upgraded
+             * @description Version bumps as [{'name': str, 'purl_old': purl, 'purl_new': purl}]
+             */
+            upgraded?: {
+                [key: string]: string;
+            }[];
+        };
+        /** SbomDiffResponse */
+        SbomDiffResponse: {
+            /** Sbom Id */
+            sbom_id: string;
+            /** Other Sbom Id */
+            other_sbom_id: string;
+            diff: components["schemas"]["SbomDiff"];
+        };
+        /**
+         * SbomListEntry
+         * @description Lightweight SBOM summary for list endpoints.
+         */
+        SbomListEntry: {
+            /** Id */
+            id: string;
+            /** Application Id */
+            application_id: string;
+            /** Repository Full Name */
+            repository_full_name: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Git Ref */
+            git_ref?: string | null;
+            /** Branch */
+            branch?: string | null;
+            /** Component Count */
+            component_count: number;
+            /** Vulnerability Summary */
+            vulnerability_summary: {
+                [key: string]: number;
+            };
+            /** License Summary */
+            license_summary: {
+                [key: string]: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Has Diff
+             * @default false
+             */
+            has_diff: boolean;
+        };
+        /** SbomListResponse */
+        SbomListResponse: {
+            /** Sboms */
+            sboms: components["schemas"]["SbomListEntry"][];
+            /** Total */
+            total: number;
+        };
+        /**
          * Scan
          * @description Represents a single repository scan within an application.
          */
@@ -4707,7 +5409,7 @@ export interface components {
              * @description Git commit SHA that was scanned
              */
             commit_hash?: string | null;
-            /** @description Type of scan: SECRETS_SCAN, SEMGREP_SCAN, or DEEP_AI_SCAN */
+            /** @description Type of scan: SECRETS_SCAN, SEMGREP_SCAN, DEEP_AI_SCAN, or SBOM_SCAN */
             scan_type: components["schemas"]["ScanType"];
             /**
              * Metadata
@@ -5013,6 +5715,21 @@ export interface components {
             } | null;
         };
         /**
+         * ScanBranchOverrideRequest
+         * @description Run-scoped branch selection for one repository in a manual scan.
+         */
+        ScanBranchOverrideRequest: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "github" | "gitlab" | "azure_devops";
+            /** Repository Full Name */
+            repository_full_name: string;
+            /** Branch */
+            branch: string;
+        };
+        /**
          * ScanCostSummary
          * @description Summary of LLM costs for a single scan.
          */
@@ -5058,6 +5775,14 @@ export interface components {
             /** Application Id */
             application_id: string;
             scan_type: components["schemas"]["ScanType"];
+            /**
+             * Source
+             * @default manual
+             * @enum {string}
+             */
+            source: "manual" | "onboarding";
+            /** Branch Overrides */
+            branch_overrides?: components["schemas"]["ScanBranchOverrideRequest"][] | null;
         };
         /**
          * ScanSchedule
@@ -5202,7 +5927,7 @@ export interface components {
          * @description Available scan types for repository security scanning.
          * @enum {string}
          */
-        ScanType: "secrets_scan" | "semgrep_scan" | "deep_ai_scan";
+        ScanType: "secrets_scan" | "semgrep_scan" | "deep_ai_scan" | "sbom_scan";
         /**
          * ScanTypeBreakdown
          * @description SLA adherence breakdown for a single scan type.
