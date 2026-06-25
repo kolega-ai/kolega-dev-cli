@@ -6,9 +6,11 @@ import type { components } from "./openapi-types.generated.js";
 
 type Schemas = components["schemas"];
 
-export type Application = Schemas["PublicApplicationResponse"];
-export type ApplicationRepository = Schemas["PublicApplicationRepository"];
-export type ApplicationListResponse = Schemas["PublicPaginatedResponse_PublicApplicationResponse_"];
+export type Repository = Schemas["PublicRepositoryResponse"];
+export type RepositoryRef = Schemas["PublicRepositoryRef"];
+export type RepositoryListResponse = Schemas["PublicPaginatedResponse_PublicRepositoryResponse_"];
+
+export type Me = Schemas["PublicMeResponse"];
 
 export type ScanBatch = Schemas["PublicScanBatchResponse"];
 export type ScanBatchListResponse = Schemas["PublicPaginatedResponse_PublicScanBatchResponse_"];
@@ -24,18 +26,23 @@ export type FindingListResponse = Schemas["PublicPaginatedResponse_PublicFinding
 export type FindingStatusUpdateRequest = Schemas["PublicFindingStatusUpdateRequest"];
 export type FindingStatus = Schemas["FindingStatus"];
 
+export type FindingEvent = Schemas["PublicFindingEventResponse"];
+export type FindingEventListResponse =
+  Schemas["PublicPaginatedResponse_PublicFindingEventResponse_"];
+
 export type Fix = Schemas["PublicFixResponse"];
 export type FixListResponse = Schemas["PublicPaginatedResponse_PublicFixResponse_"];
 export type FixProgress = Schemas["PublicFixProgressResponse"];
 export type FixDiff = Schemas["PublicFixDiffResponse"];
 export type FixCreateRequest = Schemas["PublicFixCreateRequest"];
+export type FixRefineRequest = Schemas["PublicFixRefineRequest"];
 export type FixPullRequestSummary = Schemas["PublicFixPullRequestSummary"];
 export type CreatePullRequestsRequest = Schemas["PublicCreatePRRequest"];
 export type CreatedPullRequestsResponse = Schemas["PublicPullRequestsCreatedResponse"];
 
 export type QuotaBalance = Schemas["PublicQuotaBalanceResponse"];
 export type QuotaCounter = Schemas["PublicQuotaCounter"];
-export type ApplicationQuota = Schemas["PublicApplicationQuota"];
+export type RepositoryQuota = Schemas["PublicRepositoryQuota"];
 
 export const SCAN_TYPES: readonly ScanType[] = [
   "secrets_scan",

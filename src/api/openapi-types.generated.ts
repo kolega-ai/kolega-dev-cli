@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/applications": {
+    "/api/v1/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Applications
-         * @description List applications for the calling organization.
+         * Get Public Api Me
+         * @description Return safe metadata for the authenticated API key connection.
          */
-        get: operations["list_applications_api_v1_applications_get"];
+        get: operations["get_public_api_me_api_v1_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}": {
+    "/api/v1/repositories": {
         parameters: {
             query?: never;
             header?: never;
@@ -32,10 +32,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Application
-         * @description Get a single application by id.
+         * List Repositories
+         * @description List repositories for the calling organization.
          */
-        get: operations["get_application_api_v1_applications__application_id__get"];
+        get: operations["list_repositories_api_v1_repositories_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -44,7 +44,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/scans": {
+    "/api/v1/repositories/{repository_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Repository
+         * @description Get a single repository by id.
+         */
+        get: operations["get_repository_api_v1_repositories__repository_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finding-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Finding Events
+         * @description List finding lifecycle events for the calling organization.
+         *
+         *     Events are returned reverse-chronologically so polling consumers such as
+         *     Zapier can use the event ``id`` as a stable dedupe key.
+         */
+        get: operations["list_finding_events_api_v1_finding_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/scans": {
         parameters: {
             query?: never;
             header?: never;
@@ -53,22 +96,22 @@ export interface paths {
         };
         /**
          * List Scans
-         * @description List scan batches for the application.
+         * @description List scan batches for the repository.
          */
-        get: operations["list_scans_api_v1_applications__application_id__scans_get"];
+        get: operations["list_scans_api_v1_repositories__repository_id__scans_get"];
         put?: never;
         /**
          * Create Scan
-         * @description Trigger a security scan across all repositories in the application.
+         * @description Trigger a security scan for the repository.
          */
-        post: operations["create_scan_api_v1_applications__application_id__scans_post"];
+        post: operations["create_scan_api_v1_repositories__repository_id__scans_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/scans/{scan_id}": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -79,7 +122,7 @@ export interface paths {
          * Get Scan
          * @description Get the scan batch you created. ``scan_id`` is the batch id.
          */
-        get: operations["get_scan_api_v1_applications__application_id__scans__scan_id__get"];
+        get: operations["get_scan_api_v1_repositories__repository_id__scans__scan_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -88,7 +131,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/scans/{scan_id}/progress": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}/progress": {
         parameters: {
             query?: never;
             header?: never;
@@ -104,7 +147,7 @@ export interface paths {
          *     as scans yet when the batch is still QUEUED/CREATING_SCANS). A CLI can
          *     poll this and render a progress bar from ``percent_complete``.
          */
-        get: operations["get_scan_progress_api_v1_applications__application_id__scans__scan_id__progress_get"];
+        get: operations["get_scan_progress_api_v1_repositories__repository_id__scans__scan_id__progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -113,7 +156,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/scans/{scan_id}/results": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}/results": {
         parameters: {
             query?: never;
             header?: never;
@@ -129,7 +172,7 @@ export interface paths {
          *     slicing, use ``/progress`` to see the breakdown and then filter
          *     findings by ``scan_batch_id`` if needed.
          */
-        get: operations["get_scan_results_api_v1_applications__application_id__scans__scan_id__results_get"];
+        get: operations["get_scan_results_api_v1_repositories__repository_id__scans__scan_id__results_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -138,7 +181,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/findings": {
+    "/api/v1/repositories/{repository_id}/findings": {
         parameters: {
             query?: never;
             header?: never;
@@ -147,9 +190,9 @@ export interface paths {
         };
         /**
          * List Findings
-         * @description List findings for the application.
+         * @description List findings for the repository.
          */
-        get: operations["list_findings_api_v1_applications__application_id__findings_get"];
+        get: operations["list_findings_api_v1_repositories__repository_id__findings_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -158,7 +201,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/findings/{finding_id}": {
+    "/api/v1/repositories/{repository_id}/findings/{finding_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,7 +212,7 @@ export interface paths {
          * Get Finding
          * @description Get a single finding by id.
          */
-        get: operations["get_finding_api_v1_applications__application_id__findings__finding_id__get"];
+        get: operations["get_finding_api_v1_repositories__repository_id__findings__finding_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -179,10 +222,10 @@ export interface paths {
          * Update Finding Status
          * @description Update the status of a finding (open / resolved / ignored / etc).
          */
-        patch: operations["update_finding_status_api_v1_applications__application_id__findings__finding_id__patch"];
+        patch: operations["update_finding_status_api_v1_repositories__repository_id__findings__finding_id__patch"];
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/fixes": {
+    "/api/v1/repositories/{repository_id}/fixes": {
         parameters: {
             query?: never;
             header?: never;
@@ -191,22 +234,22 @@ export interface paths {
         };
         /**
          * List Fixes
-         * @description List fixes for the application.
+         * @description List fixes for the repository.
          */
-        get: operations["list_fixes_api_v1_applications__application_id__fixes_get"];
+        get: operations["list_fixes_api_v1_repositories__repository_id__fixes_get"];
         put?: never;
         /**
          * Create Fix
-         * @description Trigger an autofix run for one or more findings in this application.
+         * @description Trigger an autofix run for one or more findings in this repository.
          */
-        post: operations["create_fix_api_v1_applications__application_id__fixes_post"];
+        post: operations["create_fix_api_v1_repositories__repository_id__fixes_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/fixes/{fix_id}": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -217,7 +260,7 @@ export interface paths {
          * Get Fix
          * @description Get a single fix by id.
          */
-        get: operations["get_fix_api_v1_applications__application_id__fixes__fix_id__get"];
+        get: operations["get_fix_api_v1_repositories__repository_id__fixes__fix_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -226,7 +269,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/diff": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/diff": {
         parameters: {
             query?: never;
             header?: never;
@@ -238,7 +281,7 @@ export interface paths {
          * @description Get the diff for a fix. Returns ``diff=null`` while the fix is still
          *     running — clients should poll until ``status`` is ``completed``.
          */
-        get: operations["get_fix_diff_api_v1_applications__application_id__fixes__fix_id__diff_get"];
+        get: operations["get_fix_diff_api_v1_repositories__repository_id__fixes__fix_id__diff_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -247,7 +290,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/progress": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/progress": {
         parameters: {
             query?: never;
             header?: never;
@@ -263,7 +306,7 @@ export interface paths {
          *     steps, last update 3s ago)"``. Deliberately does not expose message
          *     content or tool-call details.
          */
-        get: operations["get_fix_progress_api_v1_applications__application_id__fixes__fix_id__progress_get"];
+        get: operations["get_fix_progress_api_v1_repositories__repository_id__fixes__fix_id__progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -272,7 +315,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/pull-requests": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/refine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refine Fix
+         * @description Refine a completed autofix run with follow-up instructions.
+         */
+        post: operations["refine_fix_api_v1_repositories__repository_id__fixes__fix_id__refine_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Fix
+         * @description Cancel a pending or running autofix run.
+         */
+        post: operations["cancel_fix_api_v1_repositories__repository_id__fixes__fix_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/pull-requests": {
         parameters: {
             query?: never;
             header?: never;
@@ -285,7 +368,7 @@ export interface paths {
          * Create Pull Requests
          * @description Open pull requests for a completed fix.
          */
-        post: operations["create_pull_requests_api_v1_applications__application_id__fixes__fix_id__pull_requests_post"];
+        post: operations["create_pull_requests_api_v1_repositories__repository_id__fixes__fix_id__pull_requests_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -558,6 +641,12 @@ export interface components {
              */
             gitlab_instance_url?: string | null;
             /**
+             * Is Public Demo Repo
+             * @description True when this repo belongs to a private demo org and can be cloned without provider auth
+             * @default false
+             */
+            is_public_demo_repo: boolean;
+            /**
              * Pr Scan Enabled
              * @description Whether PR/MR-triggered scanning is enabled for this repository
              * @default true
@@ -633,6 +722,8 @@ export interface components {
              * @default 0
              */
             repository_count: number;
+            /** @description Counts of open findings by severity */
+            findings_summary?: components["schemas"]["FindingsSeveritySummary"];
         };
         /**
          * ApplicationType
@@ -1213,6 +1304,101 @@ export interface components {
             success: boolean;
         };
         /**
+         * DemoFixture
+         * @description Metadata for a precomputed demo application fixture stored in MongoDB.
+         */
+        DemoFixture: {
+            /**
+             * Id
+             * @description Fixture identifier
+             */
+            id?: string;
+            /**
+             * Slug
+             * @description Stable UI/seed identifier
+             */
+            slug: string;
+            /**
+             * Name
+             * @description Display name
+             */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Repository Full Name
+             * @description Public GitHub repository, e.g. owner/repo
+             */
+            repository_full_name: string;
+            /**
+             * Repository Url
+             * @description Repository web URL
+             */
+            repository_url?: string | null;
+            /**
+             * Default Branch
+             * @default main
+             */
+            default_branch: string;
+            /** Language */
+            language?: string | null;
+            /** Frameworks */
+            frameworks?: string[];
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /** Capture Options */
+            capture_options?: string[];
+            /** Source Organization Id */
+            source_organization_id?: string | null;
+            /** Source Application Id */
+            source_application_id?: string | null;
+            /** Primary Batch Source Id */
+            primary_batch_source_id?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * DemoFixtureListResponse
+         * @description Response for listing active demo fixtures.
+         */
+        DemoFixtureListResponse: {
+            /** Fixtures */
+            fixtures: components["schemas"]["DemoFixture"][];
+        };
+        /**
+         * DemoScanRequest
+         * @description Request to instantiate a demo fixture and start the fake scan progression.
+         */
+        DemoScanRequest: {
+            /** Demo Fixture Id */
+            demo_fixture_id: string;
+        };
+        /**
+         * DemoScanResponse
+         * @description Response after a private demo organization/application/batch is created.
+         */
+        DemoScanResponse: {
+            /** Organization Id */
+            organization_id: string;
+            /** Application Id */
+            application_id: string;
+            /** Batch Id */
+            batch_id: string;
+        };
+        /**
          * DeploymentExposure
          * @description How the application is exposed to users/networks.
          * @enum {string}
@@ -1438,6 +1624,11 @@ export interface components {
              * @description Description of the finding
              */
             message: string;
+            /**
+             * Title
+             * @description Human-readable finding title; falls back to a check_id-derived name when absent
+             */
+            title?: string | null;
             /**
              * Category
              * @description Category (e.g., security)
@@ -1768,7 +1959,7 @@ export interface components {
          * @description Types of finding audit events.
          * @enum {string}
          */
-        FindingEventType: "detected" | "resolved_auto" | "resolved_manual" | "resolved_pr_merged" | "resolved_pr_linked" | "reopened" | "status_changed" | "fix_created" | "fix_started" | "fix_completed" | "fix_failed" | "fix_pr_created" | "fix_pr_updated";
+        FindingEventType: "detected" | "resolved_auto" | "resolved_manual" | "resolved_pr_merged" | "resolved_pr_linked" | "reopened" | "status_changed" | "fix_created" | "fix_started" | "fix_completed" | "fix_failed" | "fix_cancelled" | "fix_pr_created" | "fix_pr_updated";
         /**
          * FindingFixSummary
          * @description Summary of fix status for a finding in list views.
@@ -1861,6 +2052,24 @@ export interface components {
              * Format: date-time
              */
             detected_at?: string;
+            /**
+             * Pending Event Type
+             * @description Deferred finding event type to emit
+             */
+            pending_event_type?: string | null;
+            pending_event_previous_status?: components["schemas"]["FindingStatus"] | null;
+            pending_event_new_status?: components["schemas"]["FindingStatus"] | null;
+            /**
+             * Pending Event Detected At
+             * @description Original scan detection time
+             */
+            pending_event_detected_at?: string | null;
+            /** Pending Event Metadata */
+            pending_event_metadata?: {
+                [key: string]: unknown;
+            };
+            /** Pending Event Emitted At */
+            pending_event_emitted_at?: string | null;
         };
         /**
          * FindingOccurrenceListResponse
@@ -1981,6 +2190,11 @@ export interface components {
              * @description Description of the finding
              */
             message: string;
+            /**
+             * Title
+             * @description Human-readable finding title; falls back to a check_id-derived name when absent
+             */
+            title?: string | null;
             /**
              * Category
              * @description Category (e.g., security)
@@ -2215,6 +2429,42 @@ export interface components {
             timeline?: components["schemas"]["TimelineEvent"][];
         };
         /**
+         * FindingsSeveritySummary
+         * @description Counts of open findings broken down by severity for an application.
+         */
+        FindingsSeveritySummary: {
+            /**
+             * Critical
+             * @description Number of open critical findings
+             * @default 0
+             */
+            critical: number;
+            /**
+             * High
+             * @description Number of open high findings
+             * @default 0
+             */
+            high: number;
+            /**
+             * Medium
+             * @description Number of open medium findings
+             * @default 0
+             */
+            medium: number;
+            /**
+             * Low
+             * @description Number of open low findings
+             * @default 0
+             */
+            low: number;
+            /**
+             * Total
+             * @description Total number of open findings
+             * @default 0
+             */
+            total: number;
+        };
+        /**
          * FixCreate
          * @description Request model for creating a fix.
          */
@@ -2318,6 +2568,43 @@ export interface components {
             merge_checked_at?: string | null;
         };
         /**
+         * FixRefineRequest
+         * @description Request model for refining a generated fix.
+         */
+        FixRefineRequest: {
+            /**
+             * Instructions
+             * @description Refinement instructions for the coding agent
+             */
+            instructions: string;
+        };
+        /**
+         * FixRefinement
+         * @description A user request to refine a previously generated fix patch.
+         */
+        FixRefinement: {
+            /**
+             * Attempt
+             * @description Generation attempt that used these refinement instructions
+             */
+            attempt: number;
+            /**
+             * Instructions
+             * @description User feedback for the refinement attempt
+             */
+            instructions: string;
+            /**
+             * Created By
+             * @description User ID of the user who requested the refinement
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+        };
+        /**
          * FixResponse
          * @description Response model for a fix with additional metadata.
          */
@@ -2363,6 +2650,11 @@ export interface components {
              */
             sandbox_id?: string | null;
             /**
+             * Celery Task Id
+             * @description Celery task ID for the running fix generation job
+             */
+            celery_task_id?: string | null;
+            /**
              * Source Repo
              * @description Repository where the fix is generated and applied (full_name)
              */
@@ -2377,6 +2669,11 @@ export interface components {
              * @description Branch the finding was detected on (PR source branch for PR-scan findings, None for default-branch scans)
              */
             source_scan_branch?: string | null;
+            /**
+             * Source Base Commit Sha
+             * @description Commit SHA used as the base when this fix diff was generated
+             */
+            source_base_commit_sha?: string | null;
             /**
              * Diff
              * @description Git diff output after agent completion
@@ -2405,11 +2702,22 @@ export interface components {
              */
             regeneration_pending: boolean;
             /**
+             * Refinement Pending
+             * @description Whether fix refinement is in progress
+             * @default false
+             */
+            refinement_pending: boolean;
+            /**
              * Pr Update Pending
              * @description Whether an existing PR update is in progress
              * @default false
              */
             pr_update_pending: boolean;
+            /**
+             * Refinement History
+             * @description Refinement requests applied to this fix
+             */
+            refinement_history?: components["schemas"]["FixRefinement"][];
             /**
              * Current Generation Attempt
              * @description Current fix generation attempt
@@ -2437,10 +2745,35 @@ export interface components {
              */
             completed_at?: string | null;
             /**
+             * Cancellation Requested At
+             * @description When cancellation was requested
+             */
+            cancellation_requested_at?: string | null;
+            /**
+             * Cancelled At
+             * @description When the fix was cancelled
+             */
+            cancelled_at?: string | null;
+            /**
+             * Cancelled By
+             * @description User ID of the user who cancelled the fix
+             */
+            cancelled_by?: string | null;
+            /**
+             * Cancellation Reason
+             * @description Reason the fix was cancelled
+             */
+            cancellation_reason?: string | null;
+            /**
              * Last Regenerated At
              * @description When the fix was last regenerated
              */
             last_regenerated_at?: string | null;
+            /**
+             * Last Refined At
+             * @description When the fix was last refined
+             */
+            last_refined_at?: string | null;
             /**
              * Archived
              * @description Whether the fix is archived
@@ -2463,7 +2796,7 @@ export interface components {
          * @description Status of a fix.
          * @enum {string}
          */
-        FixStatus: "pending" | "running" | "completed" | "failed" | "pr_creation_failed" | "pr_update_failed";
+        FixStatus: "pending" | "running" | "completed" | "failed" | "cancelled" | "pr_creation_failed" | "pr_update_failed";
         /**
          * FrameworkData
          * @description Data for a compliance framework.
@@ -3648,6 +3981,11 @@ export interface components {
              * @description Human-readable label
              */
             name: string;
+            /**
+             * Scopes
+             * @description Optional permission scopes. Omit for full public API access.
+             */
+            scopes?: components["schemas"]["OrganizationApiKeyScope"][] | null;
         };
         /**
          * OrganizationApiKeyCreateResponse
@@ -3684,6 +4022,8 @@ export interface components {
             revoked_by?: string | null;
             /** Expires At */
             expires_at?: string | null;
+            /** Scopes */
+            scopes?: components["schemas"]["OrganizationApiKeyScope"][];
             /**
              * Plaintext Key
              * @description Full bearer token. Shown exactly once.
@@ -3732,7 +4072,15 @@ export interface components {
             revoked_by?: string | null;
             /** Expires At */
             expires_at?: string | null;
+            /** Scopes */
+            scopes?: components["schemas"]["OrganizationApiKeyScope"][];
         };
+        /**
+         * OrganizationApiKeyScope
+         * @description Permission scopes for organization API keys.
+         * @enum {string}
+         */
+        OrganizationApiKeyScope: "read" | "scan:write" | "finding:write" | "fix:write" | "pr:write";
         /**
          * OrganizationCreate
          * @description Request model for creating an organization.
@@ -3743,6 +4091,13 @@ export interface components {
              * @description Organization display name
              */
             name: string;
+            /**
+             * Source
+             * @description Surface that requested organization creation
+             * @default manual
+             * @enum {string}
+             */
+            source: "manual" | "onboarding";
         };
         /**
          * OrganizationListResponse
@@ -3908,11 +4263,11 @@ export interface components {
              */
             trial_eligible: boolean;
             /**
-             * Is Public Demo
-             * @description If True, any authenticated user gets implicit viewer access to showcase the product
+             * Is Demo
+             * @description If True, this is a private per-user demo organization backed by demo fixture data
              * @default false
              */
-            is_public_demo: boolean;
+            is_demo: boolean;
             /**
              * Member Count
              * @description Number of members in the organization
@@ -4104,54 +4459,18 @@ export interface components {
             prompt: string;
         };
         /**
-         * PublicApplicationQuota
-         * @description Application count limit. ``max`` is null when unlimited.
+         * PublicApiKeySummary
+         * @description Safe API key metadata for connection tests.
          */
-        PublicApplicationQuota: {
-            /** Max */
-            max?: number | null;
-            /** Current */
-            current: number;
-        };
-        /**
-         * PublicApplicationRepository
-         * @description A Git repository attached to an application.
-         */
-        PublicApplicationRepository: {
-            /** Full Name */
-            full_name: string;
-            /** Default Branch */
-            default_branch: string;
-            /** Html Url */
-            html_url?: string | null;
-            /** Provider */
-            provider: string;
-        };
-        /**
-         * PublicApplicationResponse
-         * @description A Kolega Comply application — a logical group of repositories scanned together.
-         */
-        PublicApplicationResponse: {
+        PublicApiKeySummary: {
             /** Id */
             id: string;
             /** Name */
             name: string;
-            /** Description */
-            description?: string | null;
-            /** Repositories */
-            repositories?: components["schemas"]["PublicApplicationRepository"][];
-            /** Archived */
-            archived: boolean;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Scopes */
+            scopes?: string[];
         };
         /**
          * PublicCreatePRRequest
@@ -4175,14 +4494,60 @@ export interface components {
             branch_name?: string | null;
         };
         /**
+         * PublicFindingEventResponse
+         * @description Single finding lifecycle event.
+         */
+        PublicFindingEventResponse: {
+            /** Id */
+            id: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Repository Id */
+            repository_id: string;
+            /** Finding Id */
+            finding_id: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Scan Type */
+            scan_type?: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Previous Status */
+            previous_status?: string | null;
+            /** New Status */
+            new_status?: string | null;
+            /** Severity */
+            severity?: string | null;
+            /** Check Id */
+            check_id?: string | null;
+            /** File Path */
+            file_path?: string | null;
+            /** Actor User Id */
+            actor_user_id?: string | null;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Event Timestamp
+             * Format: date-time
+             */
+            event_timestamp: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
          * PublicFindingResponse
          * @description Single security finding.
          */
         PublicFindingResponse: {
             /** Id */
             id: string;
-            /** Application Id */
-            application_id: string;
+            /** Repository Id */
+            repository_id: string;
             /** Check Id */
             check_id: string;
             /** Severity */
@@ -4193,6 +4558,8 @@ export interface components {
             file_path: string;
             /** Message */
             message: string;
+            /** Title */
+            title?: string | null;
             /** Category */
             category: string;
             /** Scan Type */
@@ -4244,7 +4611,7 @@ export interface components {
         };
         /**
          * PublicFixCreateRequest
-         * @description Request body for ``POST /api/v1/applications/{application_id}/fixes``.
+         * @description Request body for ``POST /api/v1/repositories/{repository_id}/fixes``.
          */
         PublicFixCreateRequest: {
             /** Finding Ids */
@@ -4293,8 +4660,8 @@ export interface components {
         PublicFixProgressResponse: {
             /** Fix Id */
             fix_id: string;
-            /** Application Id */
-            application_id: string;
+            /** Repository Id */
+            repository_id: string;
             /** Status */
             status: string;
             /** Started At */
@@ -4337,14 +4704,25 @@ export interface components {
             merged_at?: string | null;
         };
         /**
+         * PublicFixRefineRequest
+         * @description Request body for ``POST /api/v1/repositories/{repository_id}/fixes/{fix_id}/refine``.
+         */
+        PublicFixRefineRequest: {
+            /**
+             * Instructions
+             * @description Follow-up instructions for refining the generated fix
+             */
+            instructions: string;
+        };
+        /**
          * PublicFixResponse
          * @description Single AI-generated fix.
          */
         PublicFixResponse: {
             /** Id */
             id: string;
-            /** Application Id */
-            application_id: string;
+            /** Repository Id */
+            repository_id: string;
             /** Finding Ids */
             finding_ids: string[];
             /** Title */
@@ -4357,6 +4735,8 @@ export interface components {
             source_repo_provider?: string | null;
             /** Source Scan Branch */
             source_scan_branch?: string | null;
+            /** Source Base Commit Sha */
+            source_base_commit_sha?: string | null;
             /** Error Message */
             error_message?: string | null;
             /** Pull Requests */
@@ -4371,10 +4751,49 @@ export interface components {
             /** Completed At */
             completed_at?: string | null;
         };
-        /** PublicPaginatedResponse[PublicApplicationResponse] */
-        PublicPaginatedResponse_PublicApplicationResponse_: {
+        /**
+         * PublicGitHubApplicationCreate
+         * @description Request model for creating an application from a public GitHub repository.
+         */
+        PublicGitHubApplicationCreate: {
+            /**
+             * Name
+             * @description Application display name
+             */
+            name: string;
+            /**
+             * Description
+             * @description Application description
+             */
+            description?: string | null;
+            /**
+             * Repository
+             * @description GitHub owner/repo or repository URL
+             */
+            repository: string;
+            /**
+             * Default Branch
+             * @description Optional branch override
+             */
+            default_branch?: string | null;
+        };
+        /**
+         * PublicMeResponse
+         * @description Authenticated public API caller context.
+         */
+        PublicMeResponse: {
+            /** Organization Id */
+            organization_id: string;
+            /** Organization Name */
+            organization_name: string;
+            /** Organization Slug */
+            organization_slug: string;
+            api_key: components["schemas"]["PublicApiKeySummary"];
+        };
+        /** PublicPaginatedResponse[PublicFindingEventResponse] */
+        PublicPaginatedResponse_PublicFindingEventResponse_: {
             /** Items */
-            items: components["schemas"]["PublicApplicationResponse"][];
+            items: components["schemas"]["PublicFindingEventResponse"][];
             /** Total */
             total: number;
             /** Limit */
@@ -4401,6 +4820,19 @@ export interface components {
         PublicPaginatedResponse_PublicFixResponse_: {
             /** Items */
             items: components["schemas"]["PublicFixResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Skip */
+            skip: number;
+            /** Has Next */
+            has_next: boolean;
+        };
+        /** PublicPaginatedResponse[PublicRepositoryResponse] */
+        PublicPaginatedResponse_PublicRepositoryResponse_: {
+            /** Items */
+            items: components["schemas"]["PublicRepositoryResponse"][];
             /** Total */
             total: number;
             /** Limit */
@@ -4451,7 +4883,7 @@ export interface components {
             prs: components["schemas"]["PublicQuotaCounter"];
             sast_scans: components["schemas"]["PublicQuotaCounter"];
             deep_ai_scans: components["schemas"]["PublicQuotaCounter"];
-            applications: components["schemas"]["PublicApplicationQuota"];
+            repositories: components["schemas"]["PublicRepositoryQuota"];
         };
         /**
          * PublicQuotaCounter
@@ -4468,6 +4900,60 @@ export interface components {
             remaining: number;
         };
         /**
+         * PublicRepositoryQuota
+         * @description Repository count limit. ``max`` is null when unlimited.
+         */
+        PublicRepositoryQuota: {
+            /** Max */
+            max?: number | null;
+            /** Current */
+            current: number;
+        };
+        /**
+         * PublicRepositoryRef
+         * @description A source repository.
+         */
+        PublicRepositoryRef: {
+            /** Full Name */
+            full_name: string;
+            /** Default Branch */
+            default_branch: string;
+            /** Html Url */
+            html_url?: string | null;
+            /** Provider */
+            provider: string;
+        };
+        /**
+         * PublicRepositoryResponse
+         * @description A repository monitored by Kolega.dev.
+         *
+         *     The ``repositories`` array holds the underlying source repositories — exactly
+         *     one for repositories created through the current flow; legacy entries may have
+         *     several.
+         */
+        PublicRepositoryResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Repositories */
+            repositories?: components["schemas"]["PublicRepositoryRef"][];
+            /** Archived */
+            archived: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
          * PublicScanBatchResponse
          * @description Scan batch — a single ``POST /api/v1/scans`` may fan out into many
          *     repository scans, all grouped under one batch.
@@ -4475,8 +4961,8 @@ export interface components {
         PublicScanBatchResponse: {
             /** Batch Id */
             batch_id: string;
-            /** Application Id */
-            application_id: string;
+            /** Repository Id */
+            repository_id: string;
             /** Scan Type */
             scan_type: string;
             /** Status */
@@ -4505,7 +4991,7 @@ export interface components {
         };
         /**
          * PublicScanCreateRequest
-         * @description Request body for ``POST /api/v1/applications/{application_id}/scans``.
+         * @description Request body for ``POST /api/v1/repositories/{repository_id}/scans``.
          */
         PublicScanCreateRequest: {
             /** @description One of secrets_scan, semgrep_scan, deep_ai_scan */
@@ -4724,8 +5210,8 @@ export interface components {
         PublicScanProgressResponse: {
             /** Batch Id */
             batch_id: string;
-            /** Application Id */
-            application_id: string;
+            /** Repository Id */
+            repository_id: string;
             /** Scan Type */
             scan_type: string;
             /** Status */
@@ -5461,6 +5947,11 @@ export interface components {
              */
             updated_at?: string;
             /**
+             * Last Heartbeat
+             * @description Last liveness signal from the running task; used by the stale-scan watchdog
+             */
+            last_heartbeat?: string | null;
+            /**
              * Completed At
              * @description When the scan completed
              */
@@ -5538,6 +6029,11 @@ export interface components {
              */
             started_at?: string | null;
             /**
+             * Updated At
+             * @description Last progress update; written on every counter change, used by the watchdog
+             */
+            updated_at?: string | null;
+            /**
              * Completed At
              * @description When processing finished
              */
@@ -5594,6 +6090,53 @@ export interface components {
             /** Has Next */
             has_next: boolean;
             stats: components["schemas"]["ScanStatsResponse"];
+        };
+        /** ScanBatchProgressResponse */
+        ScanBatchProgressResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Application Id */
+            application_id: string;
+            /** Organization Id */
+            organization_id: string;
+            /** Scan Type */
+            scan_type: string;
+            /** Status */
+            status: string;
+            /** Current Phase */
+            current_phase: string;
+            /** Current Operation */
+            current_operation: string;
+            /** Percent Complete */
+            percent_complete: number;
+            /** Eta Seconds */
+            eta_seconds?: number | null;
+            /** Estimated Completion At */
+            estimated_completion_at?: string | null;
+            /** Total Repositories */
+            total_repositories: number;
+            /** Scans Created */
+            scans_created: number;
+            /** Scans Completed */
+            scans_completed: number;
+            /** Scans Assessed */
+            scans_assessed: number;
+            /** Scans Failed */
+            scans_failed: number;
+            /** Repositories */
+            repositories: components["schemas"]["ScanProgressRepository"][];
+            finding_counts: components["schemas"]["ScanProgressFindingCounts"];
+            /** Findings */
+            findings: components["schemas"]["ScanProgressFinding"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
         };
         /**
          * ScanBatchStatus
@@ -5685,6 +6228,11 @@ export interface components {
              */
             started_at?: string | null;
             /**
+             * Updated At
+             * @description Last progress update; written on every counter change, used by the watchdog
+             */
+            updated_at?: string | null;
+            /**
              * Completed At
              * @description When processing finished
              */
@@ -5713,6 +6261,11 @@ export interface components {
             status_breakdown?: {
                 [key: string]: number;
             } | null;
+            /**
+             * Actionable Findings Count
+             * @description Distinct actionable findings surfaced by this batch (open + needs_manual_review)
+             */
+            actionable_findings_count?: number | null;
         };
         /**
          * ScanBranchOverrideRequest
@@ -5783,6 +6336,123 @@ export interface components {
             source: "manual" | "onboarding";
             /** Branch Overrides */
             branch_overrides?: components["schemas"]["ScanBranchOverrideRequest"][] | null;
+        };
+        /** ScanProgressFinding */
+        ScanProgressFinding: {
+            /** Id */
+            id: string;
+            /** Message */
+            message: string;
+            /** Severity */
+            severity: string;
+            /** Status */
+            status: string;
+            /** Assessment Status */
+            assessment_status?: string | null;
+            /** Repository Full Name */
+            repository_full_name?: string | null;
+            /** File Path */
+            file_path: string;
+            /** Line Start */
+            line_start?: number | null;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Scan Type */
+            scan_type: string;
+            /**
+             * First Detected At
+             * Format: date-time
+             */
+            first_detected_at: string;
+            /**
+             * Last Detected At
+             * Format: date-time
+             */
+            last_detected_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ScanProgressFindingCounts */
+        ScanProgressFindingCounts: {
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+            /**
+             * Actionable
+             * @default 0
+             */
+            actionable: number;
+            /** By Status */
+            by_status?: {
+                [key: string]: number;
+            };
+            /** By Assessment Status */
+            by_assessment_status?: {
+                [key: string]: number;
+            };
+            /** By Severity */
+            by_severity?: {
+                [key: string]: number;
+            };
+        };
+        /** ScanProgressRepository */
+        ScanProgressRepository: {
+            /** Scan Id */
+            scan_id: string;
+            /** Repository Full Name */
+            repository_full_name: string;
+            /** Branch */
+            branch: string;
+            /** Scan Type */
+            scan_type: string;
+            /** Status */
+            status: string;
+            /** Status Reason */
+            status_reason?: string | null;
+            /** Phase */
+            phase: string;
+            /** Message */
+            message?: string | null;
+            /** Percent Complete */
+            percent_complete: number;
+            /** Progress */
+            progress?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Findings Count
+             * @default 0
+             */
+            findings_count: number;
+            /**
+             * Total Findings Count
+             * @default 0
+             */
+            total_findings_count: number;
+            /** Chunks Total */
+            chunks_total?: number | null;
+            /** Chunks Scanned */
+            chunks_scanned?: number | null;
+            /** Raw Findings Seen */
+            raw_findings_seen?: number | null;
+            /** Findings Persisted */
+            findings_persisted?: number | null;
+            /** Findings Assessed */
+            findings_assessed?: number | null;
+            /** Total Lines */
+            total_lines?: number | null;
+            /** File Count */
+            file_count?: number | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * ScanSchedule
@@ -6261,7 +6931,7 @@ export interface components {
             };
             /**
              * Name
-             * @description Tier name (creator, pro, etc.)
+             * @description Tier name (starter, pro, etc.)
              */
             name: string;
             /**
@@ -6753,6 +7423,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * VolumeEvidence
@@ -7382,7 +8056,7 @@ export interface components {
          * CreatePRRequest
          * @description Request model for creating a PR from a fix.
          */
-        kolega_code__models__fix__CreatePRRequest: {
+        kolega_dev__models__fix__CreatePRRequest: {
             /**
              * Title
              * @description PR title (auto-generated by LLM if not provided)
@@ -7400,7 +8074,7 @@ export interface components {
             branch_name?: string | null;
         };
         /** CreatePRRequest */
-        kolega_code__routes__github_repository_router__CreatePRRequest: {
+        kolega_dev__routes__github_repository_router__CreatePRRequest: {
             /** Repo Full Name */
             repo_full_name: string;
             /** Title */
@@ -7424,10 +8098,30 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_applications_api_v1_applications_get: {
+    get_public_api_me_api_v1_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMeResponse"];
+                };
+            };
+        };
+    };
+    list_repositories_api_v1_repositories_get: {
         parameters: {
             query?: {
-                /** @description Include archived applications */
+                /** @description Include archived repositories */
                 include_archived?: boolean;
                 limit?: number;
                 skip?: number;
@@ -7444,7 +8138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicPaginatedResponse_PublicApplicationResponse_"];
+                    "application/json": components["schemas"]["PublicPaginatedResponse_PublicRepositoryResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -7458,12 +8152,12 @@ export interface operations {
             };
         };
     };
-    get_application_api_v1_applications__application_id__get: {
+    get_repository_api_v1_repositories__repository_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7475,7 +8169,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicApplicationResponse"];
+                    "application/json": components["schemas"]["PublicRepositoryResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7489,7 +8183,53 @@ export interface operations {
             };
         };
     };
-    list_scans_api_v1_applications__application_id__scans_get: {
+    list_finding_events_api_v1_finding_events_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by repository id */
+                repository_id?: string | null;
+                /** @description Filter by finding id */
+                finding_id?: string | null;
+                /** @description Filter by scan type */
+                scan_type?: string | null;
+                /** @description Filter by severity */
+                severity?: string | null;
+                /** @description Filter by event type */
+                event_type?: string | null;
+                /** @description Start time filter */
+                start?: string | null;
+                /** @description End time filter */
+                end?: string | null;
+                limit?: number;
+                skip?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPaginatedResponse_PublicFindingEventResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scans_api_v1_repositories__repository_id__scans_get: {
         parameters: {
             query?: {
                 /** @description Filter by scan type */
@@ -7501,7 +8241,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7527,12 +8267,12 @@ export interface operations {
             };
         };
     };
-    create_scan_api_v1_applications__application_id__scans_post: {
+    create_scan_api_v1_repositories__repository_id__scans_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7562,12 +8302,12 @@ export interface operations {
             };
         };
     };
-    get_scan_api_v1_applications__application_id__scans__scan_id__get: {
+    get_scan_api_v1_repositories__repository_id__scans__scan_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 scan_id: string;
             };
             cookie?: never;
@@ -7594,12 +8334,12 @@ export interface operations {
             };
         };
     };
-    get_scan_progress_api_v1_applications__application_id__scans__scan_id__progress_get: {
+    get_scan_progress_api_v1_repositories__repository_id__scans__scan_id__progress_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 scan_id: string;
             };
             cookie?: never;
@@ -7626,12 +8366,12 @@ export interface operations {
             };
         };
     };
-    get_scan_results_api_v1_applications__application_id__scans__scan_id__results_get: {
+    get_scan_results_api_v1_repositories__repository_id__scans__scan_id__results_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 scan_id: string;
             };
             cookie?: never;
@@ -7658,7 +8398,7 @@ export interface operations {
             };
         };
     };
-    list_findings_api_v1_applications__application_id__findings_get: {
+    list_findings_api_v1_repositories__repository_id__findings_get: {
         parameters: {
             query?: {
                 /** @description Filter by scan batch id */
@@ -7674,7 +8414,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7700,12 +8440,12 @@ export interface operations {
             };
         };
     };
-    get_finding_api_v1_applications__application_id__findings__finding_id__get: {
+    get_finding_api_v1_repositories__repository_id__findings__finding_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 finding_id: string;
             };
             cookie?: never;
@@ -7732,12 +8472,12 @@ export interface operations {
             };
         };
     };
-    update_finding_status_api_v1_applications__application_id__findings__finding_id__patch: {
+    update_finding_status_api_v1_repositories__repository_id__findings__finding_id__patch: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 finding_id: string;
             };
             cookie?: never;
@@ -7768,7 +8508,7 @@ export interface operations {
             };
         };
     };
-    list_fixes_api_v1_applications__application_id__fixes_get: {
+    list_fixes_api_v1_repositories__repository_id__fixes_get: {
         parameters: {
             query?: {
                 /** @description Filter by finding id */
@@ -7778,7 +8518,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7804,12 +8544,12 @@ export interface operations {
             };
         };
     };
-    create_fix_api_v1_applications__application_id__fixes_post: {
+    create_fix_api_v1_repositories__repository_id__fixes_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
             };
             cookie?: never;
         };
@@ -7839,12 +8579,12 @@ export interface operations {
             };
         };
     };
-    get_fix_api_v1_applications__application_id__fixes__fix_id__get: {
+    get_fix_api_v1_repositories__repository_id__fixes__fix_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 fix_id: string;
             };
             cookie?: never;
@@ -7871,12 +8611,12 @@ export interface operations {
             };
         };
     };
-    get_fix_diff_api_v1_applications__application_id__fixes__fix_id__diff_get: {
+    get_fix_diff_api_v1_repositories__repository_id__fixes__fix_id__diff_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 fix_id: string;
             };
             cookie?: never;
@@ -7903,12 +8643,12 @@ export interface operations {
             };
         };
     };
-    get_fix_progress_api_v1_applications__application_id__fixes__fix_id__progress_get: {
+    get_fix_progress_api_v1_repositories__repository_id__fixes__fix_id__progress_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
                 fix_id: string;
             };
             cookie?: never;
@@ -7935,12 +8675,80 @@ export interface operations {
             };
         };
     };
-    create_pull_requests_api_v1_applications__application_id__fixes__fix_id__pull_requests_post: {
+    refine_fix_api_v1_repositories__repository_id__fixes__fix_id__refine_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                application_id: string;
+                repository_id: string;
+                fix_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicFixRefineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFixResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_fix_api_v1_repositories__repository_id__fixes__fix_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+                fix_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFixResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_pull_requests_api_v1_repositories__repository_id__fixes__fix_id__pull_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
                 fix_id: string;
             };
             cookie?: never;

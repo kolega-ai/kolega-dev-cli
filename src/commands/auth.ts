@@ -6,6 +6,7 @@ import open from "open";
 import { ApiClient, buildUserAgent } from "../api/client.js";
 import { pollForDeviceToken, requestDeviceCode } from "../api/auth-device-flow.js";
 import { getQuotaBalance } from "../api/quotas.js";
+import { getMe } from "../api/me.js";
 import { clearConfig, readConfig, resolveActiveToken, writeConfig } from "../config/store.js";
 import { box, redactToken } from "../ui/tty.js";
 import { handleError } from "../ui/errors.js";
@@ -64,13 +65,17 @@ export function registerAuthCommands(program: Command, pkgVersion: string): void
           token: active.token,
           userAgent: buildUserAgent(pkgVersion),
         });
-        const balance = await getQuotaBalance(client);
+        const [balance, me] = await Promise.all([getQuotaBalance(client), getMe(client)]);
         const sourceLabel =
           active.source === "env"
             ? "KOLEGA_TOKEN environment variable"
             : active.via === "token_flag"
               ? "--token flag (API key)"
               : "device flow";
+        const scopes =
+          me.api_key.scopes && me.api_key.scopes.length > 0
+            ? me.api_key.scopes.join(", ")
+            : "full access (unscoped key)";
 
         if (globals.json) {
           renderJson({
@@ -79,6 +84,12 @@ export function registerAuthCommands(program: Command, pkgVersion: string): void
             source: active.source,
             via: active.via,
             base_url: baseUrl,
+            organization: {
+              id: me.organization_id,
+              name: me.organization_name,
+              slug: me.organization_slug,
+            },
+            api_key: me.api_key,
             period_start: balance.period_start,
             period_end: balance.period_end,
           });
@@ -86,10 +97,13 @@ export function registerAuthCommands(program: Command, pkgVersion: string): void
         }
 
         process.stdout.write(chalk.green("Authenticated ✓\n"));
-        process.stdout.write(`  Token     ${redactToken(active.token)}\n`);
-        process.stdout.write(`  Source    ${sourceLabel}\n`);
-        process.stdout.write(`  Base URL  ${baseUrl}\n`);
-        process.stdout.write(`  Period    ${balance.period_start} → ${balance.period_end}\n`);
+        process.stdout.write(`  Organization  ${me.organization_name} (${me.organization_slug})\n`);
+        process.stdout.write(`  API key       ${me.api_key.name} [${me.api_key.key_prefix}]\n`);
+        process.stdout.write(`  Scopes        ${scopes}\n`);
+        process.stdout.write(`  Token         ${redactToken(active.token)}\n`);
+        process.stdout.write(`  Source        ${sourceLabel}\n`);
+        process.stdout.write(`  Base URL      ${baseUrl}\n`);
+        process.stdout.write(`  Period        ${balance.period_start} → ${balance.period_end}\n`);
       } catch (err) {
         handleError(err);
       }
@@ -130,8 +144,9 @@ async function loginWithToken(
     userAgent: buildUserAgent(pkgVersion),
   });
   const spinner = asJson ? null : ora("Validating token against the API…").start();
+  let me;
   try {
-    await getQuotaBalance(client);
+    me = await getMe(client);
   } catch (err) {
     spinner?.fail("Token rejected");
     throw err;
@@ -144,10 +159,20 @@ async function loginWithToken(
     savedAt: new Date().toISOString(),
   });
   if (asJson) {
-    renderJson({ logged_in: true, via: "token_flag" });
+    renderJson({
+      logged_in: true,
+      via: "token_flag",
+      organization: {
+        id: me.organization_id,
+        name: me.organization_name,
+        slug: me.organization_slug,
+      },
+    });
     return;
   }
-  process.stdout.write(chalk.green("Logged in. ") + chalk.dim(`(${redactToken(token)})\n`));
+  process.stdout.write(
+    chalk.green(`Logged in to ${me.organization_name}. `) + chalk.dim(`(${redactToken(token)})\n`),
+  );
 }
 
 async function loginWithDeviceFlow(
@@ -214,19 +239,25 @@ async function loginWithDeviceFlow(
       token: token.access_token,
       userAgent: buildUserAgent(pkgVersion),
     });
-    const balance = await getQuotaBalance(authedClient);
+    const [balance, me] = await Promise.all([getQuotaBalance(authedClient), getMe(authedClient)]);
 
     if (asJson) {
       renderJson({
         logged_in: true,
         via: "device_flow",
+        organization: {
+          id: me.organization_id,
+          name: me.organization_name,
+          slug: me.organization_slug,
+        },
         period_start: balance.period_start,
         period_end: balance.period_end,
       });
       return;
     }
     process.stdout.write(
-      chalk.green("\nLogged in. ") + chalk.dim(`(${redactToken(token.access_token)})\n`),
+      chalk.green(`\nLogged in to ${me.organization_name}. `) +
+        chalk.dim(`(${redactToken(token.access_token)})\n`),
     );
     process.stdout.write(
       chalk.dim(`Quota period: ${balance.period_start} → ${balance.period_end}\n`),

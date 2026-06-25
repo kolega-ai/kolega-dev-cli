@@ -8,14 +8,14 @@ import type {
   ScanType,
 } from "./types.js";
 
-const base = (appId: string): string => `/api/v1/applications/${encodeURIComponent(appId)}/scans`;
+const base = (repoId: string): string => `/api/v1/repositories/${encodeURIComponent(repoId)}/scans`;
 
 export async function listScans(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   opts: { scanType?: ScanType; status?: string; limit?: number; skip?: number } = {},
 ): Promise<ScanBatchListResponse> {
-  return client.get<ScanBatchListResponse>(base(applicationId), {
+  return client.get<ScanBatchListResponse>(base(repositoryId), {
     query: {
       scan_type: opts.scanType,
       status: opts.status,
@@ -27,32 +27,32 @@ export async function listScans(
 
 export async function startScan(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   body: ScanCreateRequest,
 ): Promise<ScanBatch> {
-  return client.post<ScanBatch>(base(applicationId), body);
+  return client.post<ScanBatch>(base(repositoryId), body);
 }
 
 export async function getScan(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   scanId: string,
 ): Promise<ScanBatch> {
-  return client.get<ScanBatch>(`${base(applicationId)}/${encodeURIComponent(scanId)}`);
+  return client.get<ScanBatch>(`${base(repositoryId)}/${encodeURIComponent(scanId)}`);
 }
 
 export async function getScanProgress(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   scanId: string,
 ): Promise<ScanProgress> {
-  return client.get<ScanProgress>(`${base(applicationId)}/${encodeURIComponent(scanId)}/progress`);
+  return client.get<ScanProgress>(`${base(repositoryId)}/${encodeURIComponent(scanId)}/progress`);
 }
 
 export async function getScanResults(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   scanId: string,
 ): Promise<ScanResults> {
-  return client.get<ScanResults>(`${base(applicationId)}/${encodeURIComponent(scanId)}/results`);
+  return client.get<ScanResults>(`${base(repositoryId)}/${encodeURIComponent(scanId)}/results`);
 }

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { registerAuthCommands } from "./commands/auth.js";
-import { registerAppsCommands } from "./commands/apps.js";
+import { registerReposCommands } from "./commands/repos.js";
 import { registerScansCommands } from "./commands/scans.js";
 import { registerFindingsCommands } from "./commands/findings.js";
 import { registerFixesCommands } from "./commands/fixes.js";
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     .option("--json", "emit raw JSON to stdout instead of a formatted table");
 
   registerAuthCommands(program, version);
-  registerAppsCommands(program, version);
+  registerReposCommands(program, version);
   registerScansCommands(program, version);
   registerFindingsCommands(program, version);
   registerFixesCommands(program, version);

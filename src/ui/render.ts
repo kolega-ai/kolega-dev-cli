@@ -1,12 +1,13 @@
 import Table from "cli-table3";
 import chalk from "chalk";
 import type {
-  Application,
   Finding,
+  FindingEvent,
   Fix,
   FixProgress,
   QuotaBalance,
   QuotaCounter,
+  Repository,
   ScanBatch,
   ScanProgress,
   ScanResults,
@@ -26,43 +27,43 @@ export function printKv(pairs: Array<[string, string | number | null | undefined
   }
 }
 
-export function renderApplicationsTable(apps: readonly Application[]): void {
-  if (apps.length === 0) {
-    process.stdout.write(chalk.dim("No applications.\n"));
+export function renderRepositoriesTable(repos: readonly Repository[]): void {
+  if (repos.length === 0) {
+    process.stdout.write(chalk.dim("No repositories.\n"));
     return;
   }
   const table = new Table({
-    head: ["ID", "Name", "Repositories", "Archived", "Updated"],
+    head: ["ID", "Name", "Repos", "Archived", "Updated"],
     style: { head: ["cyan"] },
   });
-  for (const a of apps) {
+  for (const r of repos) {
     table.push([
-      a.id,
-      a.name,
-      String(a.repositories?.length ?? 0),
-      a.archived ? "yes" : "no",
-      fmtDate(a.updated_at),
+      r.id,
+      r.name,
+      String(r.repositories?.length ?? 0),
+      r.archived ? "yes" : "no",
+      fmtDate(r.updated_at),
     ]);
   }
   process.stdout.write(table.toString() + "\n");
 }
 
-export function renderApplication(app: Application): void {
+export function renderRepository(repo: Repository): void {
   printKv([
-    ["ID", app.id],
-    ["Name", app.name],
-    ["Description", app.description ?? null],
-    ["Archived", app.archived ? "yes" : "no"],
-    ["Created", fmtDate(app.created_at)],
-    ["Updated", fmtDate(app.updated_at)],
+    ["ID", repo.id],
+    ["Name", repo.name],
+    ["Description", repo.description ?? null],
+    ["Archived", repo.archived ? "yes" : "no"],
+    ["Created", fmtDate(repo.created_at)],
+    ["Updated", fmtDate(repo.updated_at)],
   ]);
-  if (app.repositories && app.repositories.length > 0) {
-    process.stdout.write(chalk.dim("\nRepositories:\n"));
+  if (repo.repositories && repo.repositories.length > 0) {
+    process.stdout.write(chalk.dim("\nSource repositories:\n"));
     const table = new Table({
       head: ["Full name", "Default branch", "Provider"],
       style: { head: ["cyan"] },
     });
-    for (const r of app.repositories) {
+    for (const r of repo.repositories) {
       table.push([r.full_name, r.default_branch, r.provider]);
     }
     process.stdout.write(table.toString() + "\n");
@@ -94,7 +95,7 @@ export function renderScanBatchesTable(batches: readonly ScanBatch[]): void {
 export function renderScanBatch(batch: ScanBatch): void {
   printKv([
     ["Batch ID", batch.batch_id],
-    ["Application ID", batch.application_id],
+    ["Repository ID", batch.repository_id],
     ["Type", batch.scan_type],
     ["Status", batch.status],
     ["Total repositories", batch.total_repositories],
@@ -159,7 +160,7 @@ export function renderFindingsTable(findings: readonly Finding[]): void {
 export function renderFinding(finding: Finding): void {
   printKv([
     ["ID", finding.id],
-    ["Application", finding.application_id],
+    ["Repository", finding.repository_id],
     ["Severity", finding.severity],
     ["Status", finding.status],
     ["Check", finding.check_id],
@@ -174,6 +175,34 @@ export function renderFinding(finding: Finding): void {
     ["Last detected", fmtDate(finding.last_detected_at)],
     ["Resolved", finding.resolved_at ? fmtDate(finding.resolved_at) : null],
   ]);
+}
+
+export function renderFindingEventsTable(events: readonly FindingEvent[]): void {
+  if (events.length === 0) {
+    process.stdout.write(chalk.dim("No finding events.\n"));
+    return;
+  }
+  const table = new Table({
+    head: ["Time", "Event", "Severity", "Finding", "Transition", "Check"],
+    colWidths: [22, 20, 10, 26, 24, 20],
+    wordWrap: true,
+    style: { head: ["cyan"] },
+  });
+  for (const e of events) {
+    const transition =
+      e.previous_status || e.new_status
+        ? `${e.previous_status ?? "—"} → ${e.new_status ?? "—"}`
+        : chalk.dim("—");
+    table.push([
+      fmtDate(e.event_timestamp),
+      e.event_type,
+      e.severity ? colorSeverity(e.severity) : chalk.dim("—"),
+      e.finding_id,
+      transition,
+      e.check_id ?? chalk.dim("—"),
+    ]);
+  }
+  process.stdout.write(table.toString() + "\n");
 }
 
 export function renderFixesTable(fixes: readonly Fix[]): void {
@@ -239,9 +268,9 @@ export function renderQuota(balance: QuotaBalance): void {
   push("Deep AI scans", balance.deep_ai_scans);
   process.stdout.write("\n" + table.toString() + "\n");
   process.stdout.write(
-    `${chalk.dim("Applications:")} ${balance.applications.current}` +
-      (balance.applications.max !== null && balance.applications.max !== undefined
-        ? ` / ${balance.applications.max}\n`
+    `${chalk.dim("Repositories:")} ${balance.repositories.current}` +
+      (balance.repositories.max !== null && balance.repositories.max !== undefined
+        ? ` / ${balance.repositories.max}\n`
         : "\n"),
   );
 }

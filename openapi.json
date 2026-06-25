@@ -1,20 +1,43 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kolega Comply Public API",
-    "description": "Public REST API for Kolega Comply, authenticated via organization API keys.",
+    "title": "Kolega.dev Public API",
+    "description": "Public REST API for Kolega.dev, authenticated via organization API keys.",
     "version": "v1"
   },
   "paths": {
-    "/api/v1/applications": {
+    "/api/v1/me": {
       "get": {
         "tags": [
           "public-api",
           "public-api"
         ],
-        "summary": "List Applications",
-        "description": "List applications for the calling organization.",
-        "operationId": "list_applications_api_v1_applications_get",
+        "summary": "Get Public Api Me",
+        "description": "Return safe metadata for the authenticated API key connection.",
+        "operationId": "get_public_api_me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories": {
+      "get": {
+        "tags": [
+          "public-api",
+          "public-api"
+        ],
+        "summary": "List Repositories",
+        "description": "List repositories for the calling organization.",
+        "operationId": "list_repositories_api_v1_repositories_get",
         "parameters": [
           {
             "name": "include_archived",
@@ -22,11 +45,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include archived applications",
+              "description": "Include archived repositories",
               "default": false,
               "title": "Include Archived"
             },
-            "description": "Include archived applications"
+            "description": "Include archived repositories"
           },
           {
             "name": "limit",
@@ -58,7 +81,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicPaginatedResponse_PublicApplicationResponse_"
+                  "$ref": "#/components/schemas/PublicPaginatedResponse_PublicRepositoryResponse_"
                 }
               }
             }
@@ -76,23 +99,23 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}": {
+    "/api/v1/repositories/{repository_id}": {
       "get": {
         "tags": [
           "public-api",
           "public-api"
         ],
-        "summary": "Get Application",
-        "description": "Get a single application by id.",
-        "operationId": "get_application_api_v1_applications__application_id__get",
+        "summary": "Get Repository",
+        "description": "Get a single repository by id.",
+        "operationId": "get_repository_api_v1_repositories__repository_id__get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           }
         ],
@@ -102,7 +125,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicApplicationResponse"
+                  "$ref": "#/components/schemas/PublicRepositoryResponse"
                 }
               }
             }
@@ -120,23 +143,209 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/scans": {
+    "/api/v1/finding-events": {
+      "get": {
+        "tags": [
+          "public-api",
+          "public-api"
+        ],
+        "summary": "List Finding Events",
+        "description": "List finding lifecycle events for the calling organization.\n\nEvents are returned reverse-chronologically so polling consumers such as\nZapier can use the event ``id`` as a stable dedupe key.",
+        "operationId": "list_finding_events_api_v1_finding_events_get",
+        "parameters": [
+          {
+            "name": "repository_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by repository id",
+              "title": "Repository Id"
+            },
+            "description": "Filter by repository id"
+          },
+          {
+            "name": "finding_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by finding id",
+              "title": "Finding Id"
+            },
+            "description": "Filter by finding id"
+          },
+          {
+            "name": "scan_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by scan type",
+              "title": "Scan Type"
+            },
+            "description": "Filter by scan type"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by severity",
+              "title": "Severity"
+            },
+            "description": "Filter by severity"
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by event type",
+              "title": "Event Type"
+            },
+            "description": "Filter by event type"
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start time filter",
+              "title": "Start"
+            },
+            "description": "Start time filter"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End time filter",
+              "title": "End"
+            },
+            "description": "End time filter"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPaginatedResponse_PublicFindingEventResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{repository_id}/scans": {
       "post": {
         "tags": [
           "public-api",
           "public-api"
         ],
         "summary": "Create Scan",
-        "description": "Trigger a security scan across all repositories in the application.",
-        "operationId": "create_scan_api_v1_applications__application_id__scans_post",
+        "description": "Trigger a security scan for the repository.",
+        "operationId": "create_scan_api_v1_repositories__repository_id__scans_post",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           }
         ],
@@ -179,16 +388,16 @@
           "public-api"
         ],
         "summary": "List Scans",
-        "description": "List scan batches for the application.",
-        "operationId": "list_scans_api_v1_applications__application_id__scans_get",
+        "description": "List scan batches for the repository.",
+        "operationId": "list_scans_api_v1_repositories__repository_id__scans_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -275,7 +484,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/scans/{scan_id}": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}": {
       "get": {
         "tags": [
           "public-api",
@@ -283,15 +492,15 @@
         ],
         "summary": "Get Scan",
         "description": "Get the scan batch you created. ``scan_id`` is the batch id.",
-        "operationId": "get_scan_api_v1_applications__application_id__scans__scan_id__get",
+        "operationId": "get_scan_api_v1_repositories__repository_id__scans__scan_id__get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -328,7 +537,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/scans/{scan_id}/progress": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}/progress": {
       "get": {
         "tags": [
           "public-api",
@@ -336,15 +545,15 @@
         ],
         "summary": "Get Scan Progress",
         "description": "Fine-grained progress for a scan batch.\n\nReturns the batch's aggregate counters plus a per-repository breakdown\n(including placeholder entries for repos that haven't been materialized\nas scans yet when the batch is still QUEUED/CREATING_SCANS). A CLI can\npoll this and render a progress bar from ``percent_complete``.",
-        "operationId": "get_scan_progress_api_v1_applications__application_id__scans__scan_id__progress_get",
+        "operationId": "get_scan_progress_api_v1_repositories__repository_id__scans__scan_id__progress_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -381,7 +590,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/scans/{scan_id}/results": {
+    "/api/v1/repositories/{repository_id}/scans/{scan_id}/results": {
       "get": {
         "tags": [
           "public-api",
@@ -389,15 +598,15 @@
         ],
         "summary": "Get Scan Results",
         "description": "Aggregate findings from every repository in the batch.\n\n``scan_id`` is the batch id from ``POST /scans``. Returns every finding\nattributed to this batch across all repositories. For per-repository\nslicing, use ``/progress`` to see the breakdown and then filter\nfindings by ``scan_batch_id`` if needed.",
-        "operationId": "get_scan_results_api_v1_applications__application_id__scans__scan_id__results_get",
+        "operationId": "get_scan_results_api_v1_repositories__repository_id__scans__scan_id__results_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -434,23 +643,23 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/findings": {
+    "/api/v1/repositories/{repository_id}/findings": {
       "get": {
         "tags": [
           "public-api",
           "public-api"
         ],
         "summary": "List Findings",
-        "description": "List findings for the application.",
-        "operationId": "list_findings_api_v1_applications__application_id__findings_get",
+        "description": "List findings for the repository.",
+        "operationId": "list_findings_api_v1_repositories__repository_id__findings_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -573,7 +782,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/findings/{finding_id}": {
+    "/api/v1/repositories/{repository_id}/findings/{finding_id}": {
       "get": {
         "tags": [
           "public-api",
@@ -581,15 +790,15 @@
         ],
         "summary": "Get Finding",
         "description": "Get a single finding by id.",
-        "operationId": "get_finding_api_v1_applications__application_id__findings__finding_id__get",
+        "operationId": "get_finding_api_v1_repositories__repository_id__findings__finding_id__get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -632,15 +841,15 @@
         ],
         "summary": "Update Finding Status",
         "description": "Update the status of a finding (open / resolved / ignored / etc).",
-        "operationId": "update_finding_status_api_v1_applications__application_id__findings__finding_id__patch",
+        "operationId": "update_finding_status_api_v1_repositories__repository_id__findings__finding_id__patch",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -687,23 +896,23 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/fixes": {
+    "/api/v1/repositories/{repository_id}/fixes": {
       "post": {
         "tags": [
           "public-api",
           "public-api"
         ],
         "summary": "Create Fix",
-        "description": "Trigger an autofix run for one or more findings in this application.",
-        "operationId": "create_fix_api_v1_applications__application_id__fixes_post",
+        "description": "Trigger an autofix run for one or more findings in this repository.",
+        "operationId": "create_fix_api_v1_repositories__repository_id__fixes_post",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           }
         ],
@@ -746,16 +955,16 @@
           "public-api"
         ],
         "summary": "List Fixes",
-        "description": "List fixes for the application.",
-        "operationId": "list_fixes_api_v1_applications__application_id__fixes_get",
+        "description": "List fixes for the repository.",
+        "operationId": "list_fixes_api_v1_repositories__repository_id__fixes_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -824,7 +1033,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/fixes/{fix_id}": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}": {
       "get": {
         "tags": [
           "public-api",
@@ -832,15 +1041,15 @@
         ],
         "summary": "Get Fix",
         "description": "Get a single fix by id.",
-        "operationId": "get_fix_api_v1_applications__application_id__fixes__fix_id__get",
+        "operationId": "get_fix_api_v1_repositories__repository_id__fixes__fix_id__get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -877,7 +1086,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/diff": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/diff": {
       "get": {
         "tags": [
           "public-api",
@@ -885,15 +1094,15 @@
         ],
         "summary": "Get Fix Diff",
         "description": "Get the diff for a fix. Returns ``diff=null`` while the fix is still\nrunning — clients should poll until ``status`` is ``completed``.",
-        "operationId": "get_fix_diff_api_v1_applications__application_id__fixes__fix_id__diff_get",
+        "operationId": "get_fix_diff_api_v1_repositories__repository_id__fixes__fix_id__diff_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -930,7 +1139,7 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/progress": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/progress": {
       "get": {
         "tags": [
           "public-api",
@@ -938,15 +1147,15 @@
         ],
         "summary": "Get Fix Progress",
         "description": "Minimal heartbeat for a running fix.\n\nReturns status, timings, agent step count, and a last-activity\ntimestamp so a CLI can show something like ``\"Running... (42s, 12\nsteps, last update 3s ago)\"``. Deliberately does not expose message\ncontent or tool-call details.",
-        "operationId": "get_fix_progress_api_v1_applications__application_id__fixes__fix_id__progress_get",
+        "operationId": "get_fix_progress_api_v1_repositories__repository_id__fixes__fix_id__progress_get",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -983,7 +1192,123 @@
         }
       }
     },
-    "/api/v1/applications/{application_id}/fixes/{fix_id}/pull-requests": {
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/refine": {
+      "post": {
+        "tags": [
+          "public-api",
+          "public-api"
+        ],
+        "summary": "Refine Fix",
+        "description": "Refine a completed autofix run with follow-up instructions.",
+        "operationId": "refine_fix_api_v1_repositories__repository_id__fixes__fix_id__refine_post",
+        "parameters": [
+          {
+            "name": "repository_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repository Id"
+            }
+          },
+          {
+            "name": "fix_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fix Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicFixRefineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFixResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/cancel": {
+      "post": {
+        "tags": [
+          "public-api",
+          "public-api"
+        ],
+        "summary": "Cancel Fix",
+        "description": "Cancel a pending or running autofix run.",
+        "operationId": "cancel_fix_api_v1_repositories__repository_id__fixes__fix_id__cancel_post",
+        "parameters": [
+          {
+            "name": "repository_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repository Id"
+            }
+          },
+          {
+            "name": "fix_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fix Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFixResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{repository_id}/fixes/{fix_id}/pull-requests": {
       "post": {
         "tags": [
           "public-api",
@@ -991,15 +1316,15 @@
         ],
         "summary": "Create Pull Requests",
         "description": "Open pull requests for a completed fix.",
-        "operationId": "create_pull_requests_api_v1_applications__application_id__fixes__fix_id__pull_requests_post",
+        "operationId": "create_pull_requests_api_v1_repositories__repository_id__fixes__fix_id__pull_requests_post",
         "parameters": [
           {
-            "name": "application_id",
+            "name": "repository_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Application Id"
+              "title": "Repository Id"
             }
           },
           {
@@ -1578,6 +1903,12 @@
             "title": "Gitlab Instance Url",
             "description": "GitLab instance URL for self-hosted repositories (defaults to gitlab.com when omitted)"
           },
+          "is_public_demo_repo": {
+            "type": "boolean",
+            "title": "Is Public Demo Repo",
+            "description": "True when this repo belongs to a private demo org and can be cloned without provider auth",
+            "default": false
+          },
           "pr_scan_enabled": {
             "type": "boolean",
             "title": "Pr Scan Enabled",
@@ -1682,6 +2013,10 @@
             "title": "Repository Count",
             "description": "Number of repositories in the application",
             "default": 0
+          },
+          "findings_summary": {
+            "$ref": "#/components/schemas/FindingsSeveritySummary",
+            "description": "Counts of open findings by severity"
           }
         },
         "type": "object",
@@ -2381,6 +2716,7 @@
           },
           "amount": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount"
           },
           "bundle_contents": {
@@ -2930,6 +3266,210 @@
         ],
         "title": "DeleteResponse"
       },
+      "DemoFixture": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Fixture identifier"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Slug",
+            "description": "Stable UI/seed identifier"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Display name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "repository_full_name": {
+            "type": "string",
+            "title": "Repository Full Name",
+            "description": "Public GitHub repository, e.g. owner/repo"
+          },
+          "repository_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Url",
+            "description": "Repository web URL"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch",
+            "default": "main"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "frameworks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Frameworks"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "capture_options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capture Options"
+          },
+          "source_organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Organization Id"
+          },
+          "source_application_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Application Id"
+          },
+          "primary_batch_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Batch Source Id"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "repository_full_name"
+        ],
+        "title": "DemoFixture",
+        "description": "Metadata for a precomputed demo application fixture stored in MongoDB."
+      },
+      "DemoFixtureListResponse": {
+        "properties": {
+          "fixtures": {
+            "items": {
+              "$ref": "#/components/schemas/DemoFixture"
+            },
+            "type": "array",
+            "title": "Fixtures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fixtures"
+        ],
+        "title": "DemoFixtureListResponse",
+        "description": "Response for listing active demo fixtures."
+      },
+      "DemoScanRequest": {
+        "properties": {
+          "demo_fixture_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Demo Fixture Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demo_fixture_id"
+        ],
+        "title": "DemoScanRequest",
+        "description": "Request to instantiate a demo fixture and start the fake scan progression."
+      },
+      "DemoScanResponse": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "application_id",
+          "batch_id"
+        ],
+        "title": "DemoScanResponse",
+        "description": "Response after a private demo organization/application/batch is created."
+      },
       "DeploymentExposure": {
         "type": "string",
         "enum": [
@@ -3402,6 +3942,18 @@
             "type": "string",
             "title": "Message",
             "description": "Description of the finding"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Human-readable finding title; falls back to a check_id-derived name when absent"
           },
           "category": {
             "type": "string",
@@ -4242,6 +4794,7 @@
           "fix_started",
           "fix_completed",
           "fix_failed",
+          "fix_cancelled",
           "fix_pr_created",
           "fix_pr_updated"
         ],
@@ -4380,6 +4933,68 @@
             "type": "string",
             "format": "date-time",
             "title": "Detected At"
+          },
+          "pending_event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Event Type",
+            "description": "Deferred finding event type to emit"
+          },
+          "pending_event_previous_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_event_new_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_event_detected_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Event Detected At",
+            "description": "Original scan detection time"
+          },
+          "pending_event_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Pending Event Metadata"
+          },
+          "pending_event_emitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Event Emitted At"
           }
         },
         "type": "object",
@@ -4606,6 +5221,18 @@
             "type": "string",
             "title": "Message",
             "description": "Description of the finding"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Human-readable finding title; falls back to a check_id-derived name when absent"
           },
           "category": {
             "type": "string",
@@ -5158,6 +5785,43 @@
         "title": "FindingWithTimeline",
         "description": "A finding with its full timeline for audit trail."
       },
+      "FindingsSeveritySummary": {
+        "properties": {
+          "critical": {
+            "type": "integer",
+            "title": "Critical",
+            "description": "Number of open critical findings",
+            "default": 0
+          },
+          "high": {
+            "type": "integer",
+            "title": "High",
+            "description": "Number of open high findings",
+            "default": 0
+          },
+          "medium": {
+            "type": "integer",
+            "title": "Medium",
+            "description": "Number of open medium findings",
+            "default": 0
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low",
+            "description": "Number of open low findings",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of open findings",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "FindingsSeveritySummary",
+        "description": "Counts of open findings broken down by severity for an application."
+      },
       "FixCreate": {
         "properties": {
           "application_id": {
@@ -5316,6 +5980,57 @@
         "title": "FixPullRequest",
         "description": "Information about a PR created from a fix."
       },
+      "FixRefineRequest": {
+        "properties": {
+          "instructions": {
+            "type": "string",
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Instructions",
+            "description": "Refinement instructions for the coding agent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instructions"
+        ],
+        "title": "FixRefineRequest",
+        "description": "Request model for refining a generated fix."
+      },
+      "FixRefinement": {
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Attempt",
+            "description": "Generation attempt that used these refinement instructions"
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instructions",
+            "description": "User feedback for the refinement attempt"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User ID of the user who requested the refinement"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt",
+          "instructions",
+          "created_by"
+        ],
+        "title": "FixRefinement",
+        "description": "A user request to refine a previously generated fix patch."
+      },
       "FixResponse": {
         "properties": {
           "id": {
@@ -5371,6 +6086,18 @@
             "title": "Sandbox Id",
             "description": "E2B sandbox ID when running"
           },
+          "celery_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Celery Task Id",
+            "description": "Celery task ID for the running fix generation job"
+          },
           "source_repo": {
             "anyOf": [
               {
@@ -5406,6 +6133,18 @@
             ],
             "title": "Source Scan Branch",
             "description": "Branch the finding was detected on (PR source branch for PR-scan findings, None for default-branch scans)"
+          },
+          "source_base_commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Base Commit Sha",
+            "description": "Commit SHA used as the base when this fix diff was generated"
           },
           "diff": {
             "anyOf": [
@@ -5451,11 +6190,25 @@
             "description": "Whether fix regeneration is in progress",
             "default": false
           },
+          "refinement_pending": {
+            "type": "boolean",
+            "title": "Refinement Pending",
+            "description": "Whether fix refinement is in progress",
+            "default": false
+          },
           "pr_update_pending": {
             "type": "boolean",
             "title": "Pr Update Pending",
             "description": "Whether an existing PR update is in progress",
             "default": false
+          },
+          "refinement_history": {
+            "items": {
+              "$ref": "#/components/schemas/FixRefinement"
+            },
+            "type": "array",
+            "title": "Refinement History",
+            "description": "Refinement requests applied to this fix"
           },
           "current_generation_attempt": {
             "type": "integer",
@@ -5500,6 +6253,56 @@
             "title": "Completed At",
             "description": "When the fix completed"
           },
+          "cancellation_requested_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Requested At",
+            "description": "When cancellation was requested"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At",
+            "description": "When the fix was cancelled"
+          },
+          "cancelled_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By",
+            "description": "User ID of the user who cancelled the fix"
+          },
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Reason",
+            "description": "Reason the fix was cancelled"
+          },
           "last_regenerated_at": {
             "anyOf": [
               {
@@ -5512,6 +6315,19 @@
             ],
             "title": "Last Regenerated At",
             "description": "When the fix was last regenerated"
+          },
+          "last_refined_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refined At",
+            "description": "When the fix was last refined"
           },
           "archived": {
             "type": "boolean",
@@ -5563,6 +6379,7 @@
           "running",
           "completed",
           "failed",
+          "cancelled",
           "pr_creation_failed",
           "pr_update_failed"
         ],
@@ -6002,6 +6819,7 @@
           },
           "amount": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount"
           },
           "status": {
@@ -6989,7 +7807,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Input Price",
@@ -7001,7 +7820,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Output Price",
@@ -7013,7 +7833,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7028,7 +7849,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7154,16 +7976,19 @@
           },
           "input_price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Input Price"
           },
           "output_price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Output Price"
           },
           "cache_read_price": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7174,7 +7999,8 @@
           "cache_write_price": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7271,7 +8097,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Input Price",
@@ -7283,7 +8110,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Output Price",
@@ -7295,7 +8123,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7310,7 +8139,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -7981,6 +8811,21 @@
             "minLength": 1,
             "title": "Name",
             "description": "Human-readable label"
+          },
+          "scopes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OrganizationApiKeyScope"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scopes",
+            "description": "Optional permission scopes. Omit for full public API access."
           }
         },
         "type": "object",
@@ -8085,6 +8930,13 @@
               }
             ],
             "title": "Expires At"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "title": "Scopes"
           },
           "plaintext_key": {
             "type": "string",
@@ -8222,6 +9074,13 @@
               }
             ],
             "title": "Expires At"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "title": "Scopes"
           }
         },
         "type": "object",
@@ -8236,6 +9095,18 @@
         "title": "OrganizationApiKeyResponse",
         "description": "Safe API key view returned by list and get. Never includes the plaintext."
       },
+      "OrganizationApiKeyScope": {
+        "type": "string",
+        "enum": [
+          "read",
+          "scan:write",
+          "finding:write",
+          "fix:write",
+          "pr:write"
+        ],
+        "title": "OrganizationApiKeyScope",
+        "description": "Permission scopes for organization API keys."
+      },
       "OrganizationCreate": {
         "properties": {
           "name": {
@@ -8244,6 +9115,16 @@
             "minLength": 1,
             "title": "Name",
             "description": "Organization display name"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "onboarding"
+            ],
+            "title": "Source",
+            "description": "Surface that requested organization creation",
+            "default": "manual"
           }
         },
         "type": "object",
@@ -8560,10 +9441,10 @@
             "description": "Whether this org is eligible for a free trial",
             "default": true
           },
-          "is_public_demo": {
+          "is_demo": {
             "type": "boolean",
-            "title": "Is Public Demo",
-            "description": "If True, any authenticated user gets implicit viewer access to showcase the product",
+            "title": "Is Demo",
+            "description": "If True, this is a private per-user demo organization backed by demo fixture data",
             "default": false
           },
           "member_count": {
@@ -8788,7 +9669,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Input Price",
@@ -8800,7 +9682,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Output Price",
@@ -8812,7 +9695,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -8826,7 +9710,8 @@
                 "type": "number"
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -8866,18 +9751,21 @@
           },
           "input_price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Input Price",
             "description": "Price per 1M input tokens in USD for this tier"
           },
           "output_price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Output Price",
             "description": "Price per 1M output tokens in USD for this tier"
           },
           "cache_read_price": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -8888,7 +9776,8 @@
           "cache_write_price": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -9008,67 +9897,7 @@
         "title": "PromptDebugResponse",
         "description": "Response model for prompt debugging."
       },
-      "PublicApplicationQuota": {
-        "properties": {
-          "max": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max"
-          },
-          "current": {
-            "type": "integer",
-            "title": "Current"
-          }
-        },
-        "type": "object",
-        "required": [
-          "current"
-        ],
-        "title": "PublicApplicationQuota",
-        "description": "Application count limit. ``max`` is null when unlimited."
-      },
-      "PublicApplicationRepository": {
-        "properties": {
-          "full_name": {
-            "type": "string",
-            "title": "Full Name"
-          },
-          "default_branch": {
-            "type": "string",
-            "title": "Default Branch"
-          },
-          "html_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Html Url"
-          },
-          "provider": {
-            "type": "string",
-            "title": "Provider"
-          }
-        },
-        "type": "object",
-        "required": [
-          "full_name",
-          "default_branch",
-          "provider"
-        ],
-        "title": "PublicApplicationRepository",
-        "description": "A Git repository attached to an application."
-      },
-      "PublicApplicationResponse": {
+      "PublicApiKeySummary": {
         "properties": {
           "id": {
             "type": "string",
@@ -9078,49 +9907,26 @@
             "type": "string",
             "title": "Name"
           },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix"
           },
-          "repositories": {
+          "scopes": {
             "items": {
-              "$ref": "#/components/schemas/PublicApplicationRepository"
+              "type": "string"
             },
             "type": "array",
-            "title": "Repositories"
-          },
-          "archived": {
-            "type": "boolean",
-            "title": "Archived"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
+            "title": "Scopes"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "archived",
-          "created_at",
-          "updated_at"
+          "key_prefix"
         ],
-        "title": "PublicApplicationResponse",
-        "description": "A Kolega Comply application — a logical group of repositories scanned together."
+        "title": "PublicApiKeySummary",
+        "description": "Safe API key metadata for connection tests."
       },
       "PublicCreatePRRequest": {
         "properties": {
@@ -9165,15 +9971,154 @@
         "title": "PublicCreatePRRequest",
         "description": "Request body for ``POST /api/v1/fixes/{id}/pull-requests``."
       },
+      "PublicFindingEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "repository_id": {
+            "type": "string",
+            "title": "Repository Id"
+          },
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "scan_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Type"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "previous_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Status"
+          },
+          "new_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Status"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "check_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Id"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "event_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Event Timestamp"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "repository_id",
+          "finding_id",
+          "event_type",
+          "event_timestamp",
+          "created_at"
+        ],
+        "title": "PublicFindingEventResponse",
+        "description": "Single finding lifecycle event."
+      },
       "PublicFindingResponse": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "application_id": {
+          "repository_id": {
             "type": "string",
-            "title": "Application Id"
+            "title": "Repository Id"
           },
           "check_id": {
             "type": "string",
@@ -9194,6 +10139,17 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "category": {
             "type": "string",
@@ -9304,7 +10260,7 @@
         "type": "object",
         "required": [
           "id",
-          "application_id",
+          "repository_id",
           "check_id",
           "severity",
           "status",
@@ -9390,7 +10346,7 @@
           "source_repo"
         ],
         "title": "PublicFixCreateRequest",
-        "description": "Request body for ``POST /api/v1/applications/{application_id}/fixes``."
+        "description": "Request body for ``POST /api/v1/repositories/{repository_id}/fixes``."
       },
       "PublicFixDiffResponse": {
         "properties": {
@@ -9428,9 +10384,9 @@
             "type": "string",
             "title": "Fix Id"
           },
-          "application_id": {
+          "repository_id": {
             "type": "string",
-            "title": "Application Id"
+            "title": "Repository Id"
           },
           "status": {
             "type": "string",
@@ -9503,7 +10459,7 @@
         "type": "object",
         "required": [
           "fix_id",
-          "application_id",
+          "repository_id",
           "status"
         ],
         "title": "PublicFixProgressResponse",
@@ -9561,15 +10517,32 @@
         "title": "PublicFixPullRequestSummary",
         "description": "A pull request created from a fix."
       },
+      "PublicFixRefineRequest": {
+        "properties": {
+          "instructions": {
+            "type": "string",
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Instructions",
+            "description": "Follow-up instructions for refining the generated fix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instructions"
+        ],
+        "title": "PublicFixRefineRequest",
+        "description": "Request body for ``POST /api/v1/repositories/{repository_id}/fixes/{fix_id}/refine``."
+      },
       "PublicFixResponse": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "application_id": {
+          "repository_id": {
             "type": "string",
-            "title": "Application Id"
+            "title": "Repository Id"
           },
           "finding_ids": {
             "items": {
@@ -9618,6 +10591,17 @@
               }
             ],
             "title": "Source Scan Branch"
+          },
+          "source_base_commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Base Commit Sha"
           },
           "error_message": {
             "anyOf": [
@@ -9670,7 +10654,7 @@
         "type": "object",
         "required": [
           "id",
-          "application_id",
+          "repository_id",
           "finding_ids",
           "title",
           "status",
@@ -9679,11 +10663,91 @@
         "title": "PublicFixResponse",
         "description": "Single AI-generated fix."
       },
-      "PublicPaginatedResponse_PublicApplicationResponse_": {
+      "PublicGitHubApplicationCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Application display name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Application description"
+          },
+          "repository": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Repository",
+            "description": "GitHub owner/repo or repository URL"
+          },
+          "default_branch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Branch",
+            "description": "Optional branch override"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "repository"
+        ],
+        "title": "PublicGitHubApplicationCreate",
+        "description": "Request model for creating an application from a public GitHub repository."
+      },
+      "PublicMeResponse": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "organization_name": {
+            "type": "string",
+            "title": "Organization Name"
+          },
+          "organization_slug": {
+            "type": "string",
+            "title": "Organization Slug"
+          },
+          "api_key": {
+            "$ref": "#/components/schemas/PublicApiKeySummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "organization_name",
+          "organization_slug",
+          "api_key"
+        ],
+        "title": "PublicMeResponse",
+        "description": "Authenticated public API caller context."
+      },
+      "PublicPaginatedResponse_PublicFindingEventResponse_": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/PublicApplicationResponse"
+              "$ref": "#/components/schemas/PublicFindingEventResponse"
             },
             "type": "array",
             "title": "Items"
@@ -9713,7 +10777,7 @@
           "skip",
           "has_next"
         ],
-        "title": "PublicPaginatedResponse[PublicApplicationResponse]"
+        "title": "PublicPaginatedResponse[PublicFindingEventResponse]"
       },
       "PublicPaginatedResponse_PublicFindingResponse_": {
         "properties": {
@@ -9786,6 +10850,42 @@
           "has_next"
         ],
         "title": "PublicPaginatedResponse[PublicFixResponse]"
+      },
+      "PublicPaginatedResponse_PublicRepositoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicRepositoryResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "skip": {
+            "type": "integer",
+            "title": "Skip"
+          },
+          "has_next": {
+            "type": "boolean",
+            "title": "Has Next"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "skip",
+          "has_next"
+        ],
+        "title": "PublicPaginatedResponse[PublicRepositoryResponse]"
       },
       "PublicPaginatedResponse_PublicScanBatchResponse_": {
         "properties": {
@@ -9866,8 +10966,8 @@
           "deep_ai_scans": {
             "$ref": "#/components/schemas/PublicQuotaCounter"
           },
-          "applications": {
-            "$ref": "#/components/schemas/PublicApplicationQuota"
+          "repositories": {
+            "$ref": "#/components/schemas/PublicRepositoryQuota"
           }
         },
         "type": "object",
@@ -9877,7 +10977,7 @@
           "prs",
           "sast_scans",
           "deep_ai_scans",
-          "applications"
+          "repositories"
         ],
         "title": "PublicQuotaBalanceResponse",
         "description": "Current-period quota balance for the calling organization."
@@ -9911,15 +11011,129 @@
         "title": "PublicQuotaCounter",
         "description": "Per-quota-type counters within the current billing period."
       },
+      "PublicRepositoryQuota": {
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "current": {
+            "type": "integer",
+            "title": "Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current"
+        ],
+        "title": "PublicRepositoryQuota",
+        "description": "Repository count limit. ``max`` is null when unlimited."
+      },
+      "PublicRepositoryRef": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch"
+          },
+          "html_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html Url"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "default_branch",
+          "provider"
+        ],
+        "title": "PublicRepositoryRef",
+        "description": "A source repository."
+      },
+      "PublicRepositoryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/PublicRepositoryRef"
+            },
+            "type": "array",
+            "title": "Repositories"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "archived",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PublicRepositoryResponse",
+        "description": "A repository monitored by Kolega.dev.\n\nThe ``repositories`` array holds the underlying source repositories — exactly\none for repositories created through the current flow; legacy entries may have\nseveral."
+      },
       "PublicScanBatchResponse": {
         "properties": {
           "batch_id": {
             "type": "string",
             "title": "Batch Id"
           },
-          "application_id": {
+          "repository_id": {
             "type": "string",
-            "title": "Application Id"
+            "title": "Repository Id"
           },
           "scan_type": {
             "type": "string",
@@ -9993,7 +11207,7 @@
         "type": "object",
         "required": [
           "batch_id",
-          "application_id",
+          "repository_id",
           "scan_type",
           "status",
           "total_repositories",
@@ -10018,7 +11232,7 @@
           "scan_type"
         ],
         "title": "PublicScanCreateRequest",
-        "description": "Request body for ``POST /api/v1/applications/{application_id}/scans``."
+        "description": "Request body for ``POST /api/v1/repositories/{repository_id}/scans``."
       },
       "PublicScanEngineStatus": {
         "properties": {
@@ -10485,9 +11699,9 @@
             "type": "string",
             "title": "Batch Id"
           },
-          "application_id": {
+          "repository_id": {
             "type": "string",
-            "title": "Application Id"
+            "title": "Repository Id"
           },
           "scan_type": {
             "type": "string",
@@ -10567,7 +11781,7 @@
         "type": "object",
         "required": [
           "batch_id",
-          "application_id",
+          "repository_id",
           "scan_type",
           "status",
           "total_repositories",
@@ -10908,6 +12122,7 @@
           },
           "amount": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount"
           }
         },
@@ -11841,6 +13056,19 @@
             "format": "date-time",
             "title": "Updated At"
           },
+          "last_heartbeat": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat",
+            "description": "Last liveness signal from the running task; used by the stale-scan watchdog"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -11947,6 +13175,19 @@
             ],
             "title": "Started At",
             "description": "When processing began"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last progress update; written on every counter change, used by the watchdog"
           },
           "completed_at": {
             "anyOf": [
@@ -12082,6 +13323,152 @@
         "title": "ScanBatchListResponse",
         "description": "Response model for listing scan batches (metadata only, no scans)."
       },
+      "ScanBatchProgressResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "scan_type": {
+            "type": "string",
+            "title": "Scan Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "current_phase": {
+            "type": "string",
+            "title": "Current Phase"
+          },
+          "current_operation": {
+            "type": "string",
+            "title": "Current Operation"
+          },
+          "percent_complete": {
+            "type": "integer",
+            "title": "Percent Complete"
+          },
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
+          },
+          "estimated_completion_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Completion At"
+          },
+          "total_repositories": {
+            "type": "integer",
+            "title": "Total Repositories"
+          },
+          "scans_created": {
+            "type": "integer",
+            "title": "Scans Created"
+          },
+          "scans_completed": {
+            "type": "integer",
+            "title": "Scans Completed"
+          },
+          "scans_assessed": {
+            "type": "integer",
+            "title": "Scans Assessed"
+          },
+          "scans_failed": {
+            "type": "integer",
+            "title": "Scans Failed"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/ScanProgressRepository"
+            },
+            "type": "array",
+            "title": "Repositories"
+          },
+          "finding_counts": {
+            "$ref": "#/components/schemas/ScanProgressFindingCounts"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/ScanProgressFinding"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "application_id",
+          "organization_id",
+          "scan_type",
+          "status",
+          "current_phase",
+          "current_operation",
+          "percent_complete",
+          "total_repositories",
+          "scans_created",
+          "scans_completed",
+          "scans_assessed",
+          "scans_failed",
+          "repositories",
+          "finding_counts",
+          "findings",
+          "created_at"
+        ],
+        "title": "ScanBatchProgressResponse"
+      },
       "ScanBatchStatus": {
         "type": "string",
         "enum": [
@@ -12174,6 +13561,19 @@
             "title": "Started At",
             "description": "When processing began"
           },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last progress update; written on every counter change, used by the watchdog"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -12227,6 +13627,18 @@
             ],
             "title": "Status Breakdown",
             "description": "Scan counts by status (e.g., {'pending': 2, 'succeeded': 5})"
+          },
+          "actionable_findings_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actionable Findings Count",
+            "description": "Distinct actionable findings surfaced by this batch (open + needs_manual_review)"
           }
         },
         "type": "object",
@@ -12424,6 +13836,306 @@
         ],
         "title": "ScanCreateRequest",
         "description": "Request model for creating scans."
+      },
+      "ScanProgressFinding": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "assessment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Status"
+          },
+          "repository_full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Full Name"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "scan_type": {
+            "type": "string",
+            "title": "Scan Type"
+          },
+          "first_detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "First Detected At"
+          },
+          "last_detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Detected At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "message",
+          "severity",
+          "status",
+          "file_path",
+          "scan_type",
+          "first_detected_at",
+          "last_detected_at",
+          "updated_at"
+        ],
+        "title": "ScanProgressFinding"
+      },
+      "ScanProgressFindingCounts": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "actionable": {
+            "type": "integer",
+            "title": "Actionable",
+            "default": 0
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Status"
+          },
+          "by_assessment_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Assessment Status"
+          },
+          "by_severity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Severity"
+          }
+        },
+        "type": "object",
+        "title": "ScanProgressFindingCounts"
+      },
+      "ScanProgressRepository": {
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id"
+          },
+          "repository_full_name": {
+            "type": "string",
+            "title": "Repository Full Name"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "scan_type": {
+            "type": "string",
+            "title": "Scan Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "percent_complete": {
+            "type": "integer",
+            "title": "Percent Complete"
+          },
+          "progress": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Progress"
+          },
+          "findings_count": {
+            "type": "integer",
+            "title": "Findings Count",
+            "default": 0
+          },
+          "total_findings_count": {
+            "type": "integer",
+            "title": "Total Findings Count",
+            "default": 0
+          },
+          "chunks_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunks Total"
+          },
+          "chunks_scanned": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunks Scanned"
+          },
+          "raw_findings_seen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Findings Seen"
+          },
+          "findings_persisted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings Persisted"
+          },
+          "findings_assessed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings Assessed"
+          },
+          "total_lines": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Lines"
+          },
+          "file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Count"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scan_id",
+          "repository_full_name",
+          "branch",
+          "scan_type",
+          "status",
+          "phase",
+          "percent_complete",
+          "updated_at"
+        ],
+        "title": "ScanProgressRepository"
       },
       "ScanSchedule": {
         "properties": {
@@ -13185,6 +14897,7 @@
           },
           "monthly_price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Monthly Price"
           },
           "current_period_end": {
@@ -13279,7 +14992,7 @@
             "maxLength": 50,
             "minLength": 1,
             "title": "Name",
-            "description": "Tier name (creator, pro, etc.)"
+            "description": "Tier name (starter, pro, etc.)"
           },
           "price": {
             "anyOf": [
@@ -13288,7 +15001,8 @@
                 "minimum": 0
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               }
             ],
             "title": "Price",
@@ -13388,6 +15102,7 @@
           },
           "price": {
             "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Price"
           },
           "features": {
@@ -13479,7 +15194,8 @@
                 "minimum": 0
               },
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
               },
               {
                 "type": "null"
@@ -14358,6 +16074,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -15645,7 +17368,7 @@
         "title": "WorkspaceWithAccess",
         "description": "Workspace response model with access control metadata for frontend display."
       },
-      "kolega_code__models__fix__CreatePRRequest": {
+      "kolega_dev__models__fix__CreatePRRequest": {
         "properties": {
           "title": {
             "anyOf": [
@@ -15688,7 +17411,7 @@
         "title": "CreatePRRequest",
         "description": "Request model for creating a PR from a fix."
       },
-      "kolega_code__routes__github_repository_router__CreatePRRequest": {
+      "kolega_dev__routes__github_repository_router__CreatePRRequest": {
         "properties": {
           "repo_full_name": {
             "type": "string",

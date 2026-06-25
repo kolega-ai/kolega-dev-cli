@@ -59,7 +59,7 @@ function handleApiError(err: ApiError): never {
     );
     process.exit(EXIT_NOT_AUTHENTICATED);
   }
-  if (err.errorCode === "MULTIPLE_APPLICATIONS" || err.errorCode === "NO_APPLICATIONS") {
+  if (err.errorCode === "MULTIPLE_REPOSITORIES" || err.errorCode === "NO_REPOSITORIES") {
     process.stderr.write(chalk.red(err.message) + "\n");
     process.exit(EXIT_GENERIC);
   }

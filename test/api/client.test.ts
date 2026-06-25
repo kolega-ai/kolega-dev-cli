@@ -30,11 +30,11 @@ describe("ApiClient", () => {
   it("injects Authorization and User-Agent headers on GET", async () => {
     mockAgent
       .get(BASE)
-      .intercept({ path: "/api/v1/applications", method: "GET" })
+      .intercept({ path: "/api/v1/repositories", method: "GET" })
       .reply(200, { items: [], total: 0, limit: 50, skip: 0, has_next: false });
 
     const client = makeClient();
-    const res = await client.get<{ items: unknown[] }>("/api/v1/applications");
+    const res = await client.get<{ items: unknown[] }>("/api/v1/repositories");
     expect(res.items).toEqual([]);
   });
 
@@ -42,7 +42,7 @@ describe("ApiClient", () => {
     mockAgent
       .get(BASE)
       .intercept({
-        path: "/api/v1/applications/app-1/scans",
+        path: "/api/v1/repositories/repo-1/scans",
         method: "POST",
       })
       .reply((req) => {
@@ -56,7 +56,7 @@ describe("ApiClient", () => {
       });
 
     const client = makeClient();
-    const res = await client.post<{ batch_id: string }>("/api/v1/applications/app-1/scans", {
+    const res = await client.post<{ batch_id: string }>("/api/v1/repositories/repo-1/scans", {
       scan_type: "secrets_scan",
     });
     expect(res.batch_id).toBe("b-1");
@@ -89,7 +89,7 @@ describe("ApiClient", () => {
   it("throws ApiError for public-API envelope", async () => {
     mockAgent
       .get(BASE)
-      .intercept({ path: "/api/v1/applications/app-1/scans", method: "POST" })
+      .intercept({ path: "/api/v1/repositories/repo-1/scans", method: "POST" })
       .reply(
         403,
         {
@@ -104,7 +104,7 @@ describe("ApiClient", () => {
 
     const client = makeClient();
     await expect(
-      client.post("/api/v1/applications/app-1/scans", { scan_type: "secrets_scan" }),
+      client.post("/api/v1/repositories/repo-1/scans", { scan_type: "secrets_scan" }),
     ).rejects.toMatchObject({
       status: 403,
       errorCode: "OPERATION_FAILED",
@@ -151,13 +151,13 @@ describe("ApiClient", () => {
     mockAgent
       .get(BASE)
       .intercept({
-        path: "/api/v1/applications/app-1/findings?severity=high&status=open",
+        path: "/api/v1/repositories/repo-1/findings?severity=high&status=open",
         method: "GET",
       })
       .reply(200, { items: [], total: 0, limit: 50, skip: 0, has_next: false });
 
     const client = makeClient();
-    const res = await client.get("/api/v1/applications/app-1/findings", {
+    const res = await client.get("/api/v1/repositories/repo-1/findings", {
       query: { severity: "high", status: "open", scan_batch_id: undefined },
     });
     expect(res).toBeDefined();

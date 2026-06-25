@@ -7,16 +7,17 @@ import type {
   FixDiff,
   FixListResponse,
   FixProgress,
+  FixRefineRequest,
 } from "./types.js";
 
-const base = (appId: string): string => `/api/v1/applications/${encodeURIComponent(appId)}/fixes`;
+const base = (repoId: string): string => `/api/v1/repositories/${encodeURIComponent(repoId)}/fixes`;
 
 export async function listFixes(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   opts: { findingId?: string; limit?: number; skip?: number } = {},
 ): Promise<FixListResponse> {
-  return client.get<FixListResponse>(base(applicationId), {
+  return client.get<FixListResponse>(base(repositoryId), {
     query: {
       finding_id: opts.findingId,
       limit: opts.limit,
@@ -27,44 +28,57 @@ export async function listFixes(
 
 export async function createFix(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   body: FixCreateRequest,
 ): Promise<Fix> {
-  return client.post<Fix>(base(applicationId), body);
+  return client.post<Fix>(base(repositoryId), body);
 }
 
-export async function getFix(
-  client: ApiClient,
-  applicationId: string,
-  fixId: string,
-): Promise<Fix> {
-  return client.get<Fix>(`${base(applicationId)}/${encodeURIComponent(fixId)}`);
+export async function getFix(client: ApiClient, repositoryId: string, fixId: string): Promise<Fix> {
+  return client.get<Fix>(`${base(repositoryId)}/${encodeURIComponent(fixId)}`);
 }
 
 export async function getFixProgress(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   fixId: string,
 ): Promise<FixProgress> {
-  return client.get<FixProgress>(`${base(applicationId)}/${encodeURIComponent(fixId)}/progress`);
+  return client.get<FixProgress>(`${base(repositoryId)}/${encodeURIComponent(fixId)}/progress`);
 }
 
 export async function getFixDiff(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   fixId: string,
 ): Promise<FixDiff> {
-  return client.get<FixDiff>(`${base(applicationId)}/${encodeURIComponent(fixId)}/diff`);
+  return client.get<FixDiff>(`${base(repositoryId)}/${encodeURIComponent(fixId)}/diff`);
+}
+
+export async function refineFix(
+  client: ApiClient,
+  repositoryId: string,
+  fixId: string,
+  body: FixRefineRequest,
+): Promise<Fix> {
+  return client.post<Fix>(`${base(repositoryId)}/${encodeURIComponent(fixId)}/refine`, body);
+}
+
+export async function cancelFix(
+  client: ApiClient,
+  repositoryId: string,
+  fixId: string,
+): Promise<Fix> {
+  return client.post<Fix>(`${base(repositoryId)}/${encodeURIComponent(fixId)}/cancel`);
 }
 
 export async function createFixPullRequests(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   fixId: string,
   body: CreatePullRequestsRequest,
 ): Promise<CreatedPullRequestsResponse> {
   return client.post<CreatedPullRequestsResponse>(
-    `${base(applicationId)}/${encodeURIComponent(fixId)}/pull-requests`,
+    `${base(repositoryId)}/${encodeURIComponent(fixId)}/pull-requests`,
     body,
   );
 }
