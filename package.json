@@ -3,6 +3,17 @@
   "version": "2.0.0",
   "description": "Command-line interface for the Kolega DevSec public API.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kolega-ai/kolega-dev-cli.git"
+  },
+  "homepage": "https://github.com/kolega-ai/kolega-dev-cli#readme",
+  "bugs": {
+    "url": "https://github.com/kolega-ai/kolega-dev-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "kolega": "./dist/cli.js"
@@ -17,6 +28,7 @@
   },
   "scripts": {
     "generate-types": "tsx scripts/generate-types.ts",
+    "prebuild": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "tsc -p .",
     "postbuild": "node -e \"require('fs').chmodSync('dist/cli.js', 0o755)\"",
     "start": "node dist/cli.js",

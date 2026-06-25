@@ -1,0 +1,58 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing (OIDC) requires a recent npm; Node 22 ships npm 10.
+      - name: Upgrade npm (for trusted publishing)
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package version matches the release tag
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          echo "package.json: $PKG_VERSION   release tag: $RELEASE_TAG"
+          if [ "$PKG_VERSION" != "$RELEASE_TAG" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match the release tag ($RELEASE_TAG)"
+            exit 1
+          fi
+
+      - name: Skip if this version is already on npm
+        id: check
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "@kolegaai/cli@$VERSION" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::@kolegaai/cli@$VERSION is already published — skipping."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Trusted publishing: npm authenticates via the GitHub OIDC token
+      # (requires `id-token: write`) — no NPM_TOKEN — and generates provenance
+      # automatically. Configure the trusted publisher in the npm package
+      # settings (repo: kolega-ai/kolega-dev-cli, workflow: publish.yml).
+      # `npm publish` also runs prepublishOnly (generate-types -> lint -> test
+      # -> build), regenerating and validating the artifact here.
+      - name: Publish to npm
+        if: steps.check.outputs.publish == 'true'
+        run: npm publish --access public
