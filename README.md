@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong>The official CLI for <a href="https://kolega.dev">Kolega.dev</a></strong><br>
+  <strong>The official CLI for <a href="https://kolega.dev">Kolega DevSec</a></strong><br>
   Find and fix security vulnerabilities before they ship.
 </p>
 
@@ -22,11 +22,11 @@
 
 ---
 
-## What is Kolega.dev?
+## What is Kolega DevSec?
 
-[Kolega.dev](https://kolega.dev) is a security automation platform that goes beyond traditional SAST. It detects vulnerabilities with a two-tier engine — industry-standard SAST plus proprietary semantic analysis that catches logic flaws pattern-matching misses — then automatically generates merge-ready pull requests with tests included.
+[Kolega DevSec](https://kolega.dev) is a security automation platform that goes beyond traditional SAST. It detects vulnerabilities with a two-tier engine — industry-standard SAST plus proprietary semantic analysis that catches logic flaws pattern-matching misses — then automatically generates merge-ready pull requests with tests included.
 
-This CLI gives you full access to the Kolega.dev API from your terminal: trigger scans, triage findings, kick off AI autofixes, and open pull requests — all without leaving the command line.
+This CLI gives you full access to the Kolega DevSec API from your terminal: trigger scans, triage findings, kick off AI autofixes, and open pull requests — all without leaving the command line.
 
 ## Install
 
@@ -60,7 +60,7 @@ kolega quota
 kolega auth login
 ```
 
-Opens a browser to pair this machine with your Kolega.dev organization. Works on headless machines too — the CLI prints a URL and code you can enter from any device.
+Opens a browser to pair this machine with your Kolega DevSec organization. Works on headless machines too — the CLI prints a URL and code you can enter from any device.
 
 ### API key (CI / non-interactive)
 
@@ -158,7 +158,7 @@ Shows your current-period usage for PRs, SAST scans, deep AI scans, and reposito
 
 ## JSON Mode
 
-Every command supports `--json`. Output matches the Kolega.dev API response schema exactly, so you can script against it:
+Every command supports `--json`. Output matches the Kolega DevSec API response schema exactly, so you can script against it:
 
 ```sh
 # Get the first repository ID
@@ -223,5 +223,5 @@ MIT
 ---
 
 <p align="center">
-  Built for <a href="https://kolega.dev">Kolega.dev</a>
+  Built for <a href="https://kolega.dev">Kolega DevSec</a>
 </p>

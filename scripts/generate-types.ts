@@ -1,5 +1,5 @@
 /**
- * Fetch the live OpenAPI spec from the Kolega API, cache it to ./openapi.json,
+ * Fetch the live OpenAPI spec from the Kolega DevSec API, cache it to ./openapi.json,
  * then run `openapi-typescript` against the cached file to produce
  * src/api/openapi-types.generated.ts.
  *

@@ -16,11 +16,11 @@ import { DEFAULT_API_URL, type GlobalOptions } from "./context.js";
 const CLIENT_NAME_PREFIX = "kolega-cli/";
 
 export function registerAuthCommands(program: Command, pkgVersion: string): void {
-  const auth = program.command("auth").description("Authenticate against the Kolega API");
+  const auth = program.command("auth").description("Authenticate against the Kolega DevSec API");
 
   auth
     .command("login")
-    .description("Pair this machine with your Kolega organization")
+    .description("Pair this machine with your Kolega DevSec organization")
     .option("--token <token>", "use an API key directly (kcp_live_…); skips the device flow")
     .action(async (opts: { token?: string }, cmd) => {
       try {

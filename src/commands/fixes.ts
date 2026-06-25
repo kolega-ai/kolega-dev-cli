@@ -61,7 +61,7 @@ interface PrOpts {
   branchName?: string;
 }
 
-const DEFAULT_TITLE = "Kolega CLI autofix";
+const DEFAULT_TITLE = "Kolega DevSec autofix";
 
 export function registerFixesCommands(program: Command, pkgVersion: string): void {
   const fixes = program.command("fixes").description("AI-generated fixes and pull requests");
