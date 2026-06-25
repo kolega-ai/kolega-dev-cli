@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   const program = new Command();
   program
     .name("kolega")
-    .description("Command-line interface for the Kolega.dev public API")
+    .description("Command-line interface for the Kolega DevSec public API")
     .version(version)
     .option("--api-url <url>", "override the API base URL")
     .option("--json", "emit raw JSON to stdout instead of a formatted table");

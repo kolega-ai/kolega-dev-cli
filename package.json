@@ -1,7 +1,7 @@
 {
   "name": "@kolegaai/cli",
   "version": "2.0.0",
-  "description": "Command-line interface for the Kolega.dev public API.",
+  "description": "Command-line interface for the Kolega DevSec public API.",
   "license": "MIT",
   "type": "module",
   "bin": {
