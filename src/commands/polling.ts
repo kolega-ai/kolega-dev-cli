@@ -45,7 +45,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  */
 export async function pollScanProgress(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   scanId: string,
   args: PollArgs,
 ): Promise<ScanProgress> {
@@ -53,7 +53,7 @@ export async function pollScanProgress(
   const { cleanup, shouldExit } = installSigint(args);
   try {
     while (true) {
-      const progress = await getScanProgress(client, applicationId, scanId);
+      const progress = await getScanProgress(client, repositoryId, scanId);
       if (args.asJson) {
         renderJson(progress);
       } else {
@@ -77,7 +77,7 @@ export async function pollScanProgress(
 
 export async function pollFixProgress(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   fixId: string,
   args: PollArgs,
 ): Promise<FixProgress> {
@@ -85,7 +85,7 @@ export async function pollFixProgress(
   const { cleanup, shouldExit } = installSigint(args);
   try {
     while (true) {
-      const progress = await getFixProgress(client, applicationId, fixId);
+      const progress = await getFixProgress(client, repositoryId, fixId);
       if (args.asJson) {
         renderJson(progress);
       } else {

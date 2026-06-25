@@ -60,7 +60,7 @@ describe("scans API wrappers", () => {
         prs: { plan: 0, topup: 0, used: 0, remaining: 0 },
         sast_scans: { plan: 100, topup: 0, used: 100, remaining: 0 },
         deep_ai_scans: { plan: 0, topup: 0, used: 0, remaining: 0 },
-        applications: { max: null, current: 1 },
+        repositories: { max: null, current: 1 },
       });
 
     const client = makeClient();
@@ -94,7 +94,7 @@ describe("scans API wrappers", () => {
     mockAgent
       .get(BASE)
       .intercept({
-        path: "/api/v1/applications/app-1/scans",
+        path: "/api/v1/repositories/repo-1/scans",
         method: "POST",
       })
       .reply((req) => {
@@ -103,7 +103,7 @@ describe("scans API wrappers", () => {
           statusCode: 202,
           data: JSON.stringify({
             batch_id: "batch-123",
-            application_id: "app-1",
+            repository_id: "repo-1",
             scan_type: "secrets_scan",
             status: "queued",
             total_repositories: 2,
@@ -118,7 +118,7 @@ describe("scans API wrappers", () => {
       });
 
     const client = makeClient();
-    const batch = await startScan(client, "app-1", { scan_type: "secrets_scan" });
+    const batch = await startScan(client, "repo-1", { scan_type: "secrets_scan" });
     expect(batch.batch_id).toBe("batch-123");
     expect(batch.status).toBe("queued");
   });
@@ -133,12 +133,12 @@ describe("scans API wrappers", () => {
         prs: { plan: 0, topup: 0, used: 0, remaining: 0 },
         sast_scans: { plan: 100, topup: 0, used: 42, remaining: 58 },
         deep_ai_scans: { plan: 0, topup: 0, used: 0, remaining: 0 },
-        applications: { max: null, current: 1 },
+        repositories: { max: null, current: 1 },
       });
     mockAgent
       .get(BASE)
       .intercept({
-        path: "/api/v1/applications/app-1/scans",
+        path: "/api/v1/repositories/repo-1/scans",
         method: "POST",
       })
       .reply((req) => {
@@ -147,7 +147,7 @@ describe("scans API wrappers", () => {
           statusCode: 202,
           data: JSON.stringify({
             batch_id: "batch-sbom",
-            application_id: "app-1",
+            repository_id: "repo-1",
             scan_type: "sbom_scan",
             status: "queued",
             total_repositories: 1,
@@ -171,7 +171,7 @@ describe("scans API wrappers", () => {
       "--json",
       "scans",
       "start",
-      "app-1",
+      "repo-1",
       "--type",
       "sbom",
     ]);
@@ -194,7 +194,7 @@ describe("scans API wrappers", () => {
         BASE,
         "scans",
         "start",
-        "app-1",
+        "repo-1",
         "--type",
         "unknown",
       ]),

@@ -1,12 +1,12 @@
 import type { ApiClient } from "./client.js";
 import type { Finding, FindingListResponse, FindingStatus } from "./types.js";
 
-const base = (appId: string): string =>
-  `/api/v1/applications/${encodeURIComponent(appId)}/findings`;
+const base = (repoId: string): string =>
+  `/api/v1/repositories/${encodeURIComponent(repoId)}/findings`;
 
 export async function listFindings(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   opts: {
     severity?: string;
     status?: string;
@@ -16,7 +16,7 @@ export async function listFindings(
     skip?: number;
   } = {},
 ): Promise<FindingListResponse> {
-  return client.get<FindingListResponse>(base(applicationId), {
+  return client.get<FindingListResponse>(base(repositoryId), {
     query: {
       severity: opts.severity,
       status: opts.status,
@@ -30,19 +30,19 @@ export async function listFindings(
 
 export async function getFinding(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   findingId: string,
 ): Promise<Finding> {
-  return client.get<Finding>(`${base(applicationId)}/${encodeURIComponent(findingId)}`);
+  return client.get<Finding>(`${base(repositoryId)}/${encodeURIComponent(findingId)}`);
 }
 
 export async function setFindingStatus(
   client: ApiClient,
-  applicationId: string,
+  repositoryId: string,
   findingId: string,
   status: FindingStatus,
 ): Promise<Finding> {
-  return client.patch<Finding>(`${base(applicationId)}/${encodeURIComponent(findingId)}`, {
+  return client.patch<Finding>(`${base(repositoryId)}/${encodeURIComponent(findingId)}`, {
     status,
   });
 }

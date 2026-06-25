@@ -42,8 +42,8 @@ Requires **Node 22** or later.
 # Authenticate (opens browser for device-flow pairing)
 kolega auth login
 
-# List your applications
-kolega apps list
+# List your repositories
+kolega repos list
 
 # Run a secrets scan and wait for results
 kolega scans start default --type secrets --wait
@@ -79,29 +79,29 @@ Credentials are stored in `~/.config/kolega/config.json` (respects `XDG_CONFIG_H
 ### Other auth commands
 
 ```sh
-kolega auth status    # show redacted token, source, and org period
+kolega auth status    # show org, API key + scopes, redacted token, and quota period
 kolega auth logout    # remove stored credentials
 ```
 
 ## Commands
 
-### Applications
+### Repositories
 
 ```sh
-kolega apps list [--include-archived]
-kolega apps get <application-id>
+kolega repos list [--include-archived]
+kolega repos get <repository-id>
 ```
 
-> **Tip:** Most commands accept `default` as the application ID, which auto-resolves to your only application. If you have multiple, run `kolega apps list` and pass the ID explicitly.
+> **Tip:** Most commands accept `default` as the repository ID, which auto-resolves to your only repository. If you have multiple, run `kolega repos list` and pass the ID explicitly.
 
 ### Scans
 
 ```sh
-kolega scans list <app-id> [--scan-type <type>] [--status <s>]
-kolega scans start <app-id> --type <secrets|semgrep|deep-ai|sbom> [--wait]
-kolega scans get <app-id> <scan-id>
-kolega scans progress <app-id> <scan-id> [--watch] [--interval <sec>]
-kolega scans results <app-id> <scan-id>
+kolega scans list <repo-id> [--scan-type <type>] [--status <s>]
+kolega scans start <repo-id> --type <secrets|semgrep|deep-ai|sbom> [--wait]
+kolega scans get <repo-id> <scan-id>
+kolega scans progress <repo-id> <scan-id> [--watch] [--interval <sec>]
+kolega scans results <repo-id> <scan-id>
 ```
 
 - **`--wait`** blocks after starting the scan, streaming a live progress bar until it completes. Ctrl+C detaches cleanly (the scan keeps running server-side).
@@ -111,27 +111,33 @@ kolega scans results <app-id> <scan-id>
 ### Findings
 
 ```sh
-kolega findings list <app-id> [--severity <s>] [--status <s>] [--scan-batch-id <id>]
-kolega findings get <app-id> <finding-id>
-kolega findings set-status <app-id> <finding-id> [status]
+kolega findings list <repo-id> [--severity <s>] [--status <s>] [--scan-batch-id <id>]
+kolega findings get <repo-id> <finding-id>
+kolega findings set-status <repo-id> <finding-id> [status]
+kolega findings events [--repo <id>] [--finding <id>] [--event-type <t>] [--since <iso>] [--until <iso>]
 ```
 
 Omit the status argument on `set-status` and you'll be prompted interactively. Valid statuses: `open`, `resolved`, `ignored`, `false_positive`, `needs_manual_review`.
 
+`findings events` lists the finding lifecycle audit trail (newest first) across the organization, optionally filtered to a single repository or finding.
+
 ### Fixes
 
 ```sh
-kolega fixes run <app-id> --finding-ids <id,id> --instructions "..." [--wait]
-kolega fixes list <app-id> [--finding-id <id>]
-kolega fixes get <app-id> <fix-id>
-kolega fixes progress <app-id> <fix-id> [--watch]
-kolega fixes diff <app-id> <fix-id>
-kolega fixes pr <app-id> <fix-id> [--title <t>] [--body <b>] [--branch-name <n>]
+kolega fixes run <repo-id> --finding-ids <id,id> --instructions "..." [--wait]
+kolega fixes list <repo-id> [--finding-id <id>]
+kolega fixes get <repo-id> <fix-id>
+kolega fixes progress <repo-id> <fix-id> [--watch]
+kolega fixes diff <repo-id> <fix-id>
+kolega fixes refine <repo-id> <fix-id> --instructions "..." [--wait]
+kolega fixes cancel <repo-id> <fix-id>
+kolega fixes pr <repo-id> <fix-id> [--title <t>] [--body <b>] [--branch-name <n>]
 ```
 
 - If `--instructions` is omitted, your `$EDITOR` opens for multi-line input.
-- If `--source-repo` is omitted, the CLI auto-picks the application's only repo or prompts you to choose.
+- If `--source-repo` is omitted, the CLI auto-picks the repository's only source repo or prompts you to choose.
 - `--wait` streams a live heartbeat (`status — 42s — 12 steps — last activity 3s ago`) until the fix completes.
+- **`refine`** re-runs the agent on an existing fix with follow-up instructions; **`cancel`** stops a pending or running fix.
 
 ### Quota
 
@@ -139,7 +145,7 @@ kolega fixes pr <app-id> <fix-id> [--title <t>] [--body <b>] [--branch-name <n>]
 kolega quota
 ```
 
-Shows your current-period usage for PRs, SAST scans, deep AI scans, and application slots.
+Shows your current-period usage for PRs, SAST scans, deep AI scans, and repository slots.
 
 ## Global Flags
 
@@ -155,8 +161,8 @@ Shows your current-period usage for PRs, SAST scans, deep AI scans, and applicat
 Every command supports `--json`. Output matches the Kolega.dev API response schema exactly, so you can script against it:
 
 ```sh
-# Get the first application ID
-kolega apps list --json | jq -r '.items[0].id'
+# Get the first repository ID
+kolega repos list --json | jq -r '.items[0].id'
 
 # Count high-severity findings
 kolega findings list default --severity high --json | jq '.total'

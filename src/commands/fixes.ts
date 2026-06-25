@@ -2,14 +2,16 @@ import type { Command } from "commander";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
-import { getApplication, resolveApplicationId } from "../api/applications.js";
+import { getRepository, resolveRepositoryId } from "../api/repositories.js";
 import {
+  cancelFix,
   createFix,
   createFixPullRequests,
   getFix,
   getFixDiff,
   getFixProgress,
   listFixes,
+  refineFix,
 } from "../api/fixes.js";
 import { getQuotaBalance } from "../api/quotas.js";
 import type { ApiClient } from "../api/client.js";
@@ -24,7 +26,7 @@ import {
 import { handleError } from "../ui/errors.js";
 import { buildContext, type GlobalOptions } from "./context.js";
 import { pollFixProgress } from "./polling.js";
-import type { ApplicationRepository, FixCreateRequest } from "../api/types.js";
+import type { FixCreateRequest, FixRefineRequest, RepositoryRef } from "../api/types.js";
 
 interface ListOpts {
   findingId?: string;
@@ -48,6 +50,11 @@ interface ProgressOpts {
   interval?: string;
 }
 
+interface RefineOpts {
+  instructions?: string;
+  wait?: boolean;
+}
+
 interface PrOpts {
   title?: string;
   body?: string;
@@ -60,16 +67,16 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
   const fixes = program.command("fixes").description("AI-generated fixes and pull requests");
 
   fixes
-    .command("list <application-id>")
-    .description("List fixes for an application")
+    .command("list <repository-id>")
+    .description("List fixes for a repository")
     .option("--finding-id <id>", "filter by finding id")
     .option("--limit <n>", "page size", "50")
     .option("--skip <n>", "number of items to skip", "0")
-    .action(async (applicationId: string, opts: ListOpts, cmd) => {
+    .action(async (repositoryId: string, opts: ListOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const response = await listFixes(ctx.client, resolved, {
           findingId: opts.findingId,
           limit: opts.limit ? Number(opts.limit) : undefined,
@@ -86,7 +93,7 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     });
 
   fixes
-    .command("run <application-id>")
+    .command("run <repository-id>")
     .description("Trigger an autofix run for one or more findings")
     .requiredOption("--finding-ids <ids>", "comma-separated finding ids")
     .option("--instructions <text>", "fix instructions (prompts if omitted)")
@@ -96,11 +103,11 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     .option("--source-scan-branch <branch>", "branch the finding was detected on")
     .option("--wait", "block and stream progress until the fix is terminal")
     .option("--no-quota-check", "skip the pre-flight quota check")
-    .action(async (applicationId: string, opts: RunOpts, cmd) => {
+    .action(async (repositoryId: string, opts: RunOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
 
         if (opts.quotaCheck) {
           await assertPrQuotaAvailable(ctx.client);
@@ -143,7 +150,7 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
           mode: "wait",
           intervalMs: 5000,
           asJson: Boolean(globals.json),
-          resumeHint: `kolega fixes progress ${applicationId} ${fix.id}`,
+          resumeHint: `kolega fixes progress ${repositoryId} ${fix.id}`,
         });
       } catch (err) {
         handleError(err);
@@ -151,13 +158,13 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     });
 
   fixes
-    .command("get <application-id> <fix-id>")
+    .command("get <repository-id> <fix-id>")
     .description("Show a single fix")
-    .action(async (applicationId: string, fixId: string, _opts, cmd) => {
+    .action(async (repositoryId: string, fixId: string, _opts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const fix = await getFix(ctx.client, resolved, fixId);
         if (globals.json) {
           renderJson(fix);
@@ -170,15 +177,15 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     });
 
   fixes
-    .command("progress <application-id> <fix-id>")
+    .command("progress <repository-id> <fix-id>")
     .description("Show fix progress; pass --watch to tail it")
     .option("--watch", "poll until the fix reaches a terminal state")
     .option("--interval <seconds>", "poll interval when --watch is set", "5")
-    .action(async (applicationId: string, fixId: string, opts: ProgressOpts, cmd) => {
+    .action(async (repositoryId: string, fixId: string, opts: ProgressOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
 
         if (!opts.watch) {
           const progress = await getFixProgress(ctx.client, resolved, fixId);
@@ -196,7 +203,7 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
           mode: "watch",
           intervalMs,
           asJson: Boolean(globals.json),
-          resumeHint: `kolega fixes progress ${applicationId} ${fixId}`,
+          resumeHint: `kolega fixes progress ${repositoryId} ${fixId}`,
         });
       } catch (err) {
         handleError(err);
@@ -204,13 +211,13 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     });
 
   fixes
-    .command("diff <application-id> <fix-id>")
+    .command("diff <repository-id> <fix-id>")
     .description("Show the diff for a fix (may be null if still running)")
-    .action(async (applicationId: string, fixId: string, _opts, cmd) => {
+    .action(async (repositoryId: string, fixId: string, _opts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const diff = await getFixDiff(ctx.client, resolved, fixId);
         if (globals.json) {
           renderJson(diff);
@@ -229,16 +236,16 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
     });
 
   fixes
-    .command("pr <application-id> <fix-id>")
+    .command("pr <repository-id> <fix-id>")
     .description("Open pull requests for a completed fix")
     .option("--title <text>", "PR title")
     .option("--body <text>", "PR body")
     .option("--branch-name <name>", "custom branch name")
-    .action(async (applicationId: string, fixId: string, opts: PrOpts, cmd) => {
+    .action(async (repositoryId: string, fixId: string, opts: PrOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const response = await createFixPullRequests(ctx.client, resolved, fixId, {
           ...(opts.title ? { title: opts.title } : {}),
           ...(opts.body ? { body: opts.body } : {}),
@@ -258,6 +265,61 @@ export function registerFixesCommands(program: Command, pkgVersion: string): voi
         handleError(err);
       }
     });
+
+  fixes
+    .command("refine <repository-id> <fix-id>")
+    .description("Refine a fix with follow-up instructions (re-runs the agent)")
+    .option("--instructions <text>", "refinement instructions (prompts if omitted)")
+    .option("--wait", "block and stream progress until the fix is terminal")
+    .action(async (repositoryId: string, fixId: string, opts: RefineOpts, cmd) => {
+      try {
+        const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
+        const ctx = await buildContext(globals, pkgVersion);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
+        const instructions = opts.instructions ?? (await promptInstructions());
+        const body: FixRefineRequest = { instructions };
+        const fix = await refineFix(ctx.client, resolved, fixId, body);
+        if (globals.json && !opts.wait) {
+          renderJson(fix);
+          return;
+        }
+        if (!globals.json) {
+          process.stdout.write(
+            chalk.green("Refining fix ") + chalk.cyan(fix.id) + chalk.dim(` (${fix.status})\n`),
+          );
+        }
+        if (!opts.wait) return;
+        await pollFixProgress(ctx.client, resolved, fix.id, {
+          mode: "wait",
+          intervalMs: 5000,
+          asJson: Boolean(globals.json),
+          resumeHint: `kolega fixes progress ${repositoryId} ${fix.id}`,
+        });
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  fixes
+    .command("cancel <repository-id> <fix-id>")
+    .description("Cancel a pending or running fix")
+    .action(async (repositoryId: string, fixId: string, _opts, cmd) => {
+      try {
+        const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
+        const ctx = await buildContext(globals, pkgVersion);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
+        const fix = await cancelFix(ctx.client, resolved, fixId);
+        if (globals.json) {
+          renderJson(fix);
+          return;
+        }
+        process.stdout.write(
+          chalk.yellow("Cancelled fix ") + chalk.cyan(fix.id) + chalk.dim(` (${fix.status})\n`),
+        );
+      } catch (err) {
+        handleError(err);
+      }
+    });
 }
 
 async function promptInstructions(): Promise<string> {
@@ -272,12 +334,12 @@ async function promptInstructions(): Promise<string> {
   return answers.instructions.trim();
 }
 
-async function resolveSourceRepo(client: ApiClient, applicationId: string): Promise<string> {
-  const app = await getApplication(client, applicationId);
-  const repos: ApplicationRepository[] = app.repositories ?? [];
+async function resolveSourceRepo(client: ApiClient, repositoryId: string): Promise<string> {
+  const repository = await getRepository(client, repositoryId);
+  const repos: RepositoryRef[] = repository.repositories ?? [];
   if (repos.length === 0) {
     throw new Error(
-      "This application has no repositories attached. Pass --source-repo <owner/repo>.",
+      "This repository has no source repositories attached. Pass --source-repo <owner/repo>.",
     );
   }
   if (repos.length === 1) {

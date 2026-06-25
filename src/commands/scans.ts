@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 
-import { resolveApplicationId } from "../api/applications.js";
+import { resolveRepositoryId } from "../api/repositories.js";
 import { getScan, getScanProgress, getScanResults, listScans, startScan } from "../api/scans.js";
 import { getQuotaBalance } from "../api/quotas.js";
 import {
@@ -62,17 +62,17 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
   const scans = program.command("scans").description("Security scan batches");
 
   scans
-    .command("list <application-id>")
-    .description("List scan batches for an application")
+    .command("list <repository-id>")
+    .description("List scan batches for a repository")
     .option("--scan-type <type>", `filter by scan type (${SCAN_TYPE_HELP})`)
     .option("--status <status>", "filter by status")
     .option("--limit <n>", "page size", "50")
     .option("--skip <n>", "number of items to skip", "0")
-    .action(async (applicationId: string, opts: ListOpts, cmd) => {
+    .action(async (repositoryId: string, opts: ListOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const response = await listScans(ctx.client, resolved, {
           scanType: opts.scanType ? toScanType(opts.scanType) : undefined,
           status: opts.status,
@@ -90,16 +90,16 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
     });
 
   scans
-    .command("start <application-id>")
+    .command("start <repository-id>")
     .description("Trigger a security scan")
     .requiredOption("--type <type>", `scan type: ${SCAN_TYPE_HELP}`)
     .option("--wait", "block and stream progress until the scan is terminal")
     .option("--no-quota-check", "skip the pre-flight quota check")
-    .action(async (applicationId: string, opts: StartOpts, cmd) => {
+    .action(async (repositoryId: string, opts: StartOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const scanType = toScanType(opts.type);
 
         if (opts.quotaCheck) {
@@ -124,7 +124,7 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
           mode: "wait",
           intervalMs: 5000,
           asJson: Boolean(globals.json),
-          resumeHint: `kolega scans progress ${applicationId} ${batch.batch_id}`,
+          resumeHint: `kolega scans progress ${repositoryId} ${batch.batch_id}`,
         });
       } catch (err) {
         handleError(err);
@@ -132,13 +132,13 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
     });
 
   scans
-    .command("get <application-id> <scan-id>")
+    .command("get <repository-id> <scan-id>")
     .description("Show a single scan batch")
-    .action(async (applicationId: string, scanId: string, _opts, cmd) => {
+    .action(async (repositoryId: string, scanId: string, _opts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const batch = await getScan(ctx.client, resolved, scanId);
         if (globals.json) {
           renderJson(batch);
@@ -151,15 +151,15 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
     });
 
   scans
-    .command("progress <application-id> <scan-id>")
+    .command("progress <repository-id> <scan-id>")
     .description("Show scan progress; pass --watch to tail it")
     .option("--watch", "poll until the scan reaches a terminal state")
     .option("--interval <seconds>", "poll interval when --watch is set", "5")
-    .action(async (applicationId: string, scanId: string, opts: ProgressOpts, cmd) => {
+    .action(async (repositoryId: string, scanId: string, opts: ProgressOpts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
 
         if (!opts.watch) {
           const progress = await getScanProgress(ctx.client, resolved, scanId);
@@ -177,7 +177,7 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
           mode: "watch",
           intervalMs,
           asJson: Boolean(globals.json),
-          resumeHint: `kolega scans progress ${applicationId} ${scanId}`,
+          resumeHint: `kolega scans progress ${repositoryId} ${scanId}`,
         });
       } catch (err) {
         handleError(err);
@@ -185,13 +185,13 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
     });
 
   scans
-    .command("results <application-id> <scan-id>")
+    .command("results <repository-id> <scan-id>")
     .description("Show aggregated findings for a scan batch")
-    .action(async (applicationId: string, scanId: string, _opts, cmd) => {
+    .action(async (repositoryId: string, scanId: string, _opts, cmd) => {
       try {
         const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
         const ctx = await buildContext(globals, pkgVersion);
-        const resolved = await resolveApplicationId(ctx.client, applicationId);
+        const resolved = await resolveRepositoryId(ctx.client, repositoryId);
         const results = await getScanResults(ctx.client, resolved, scanId);
         if (globals.json) {
           renderJson(results);
