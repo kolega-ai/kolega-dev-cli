@@ -17,13 +17,22 @@ published. You should not need to run `npm publish` by hand.
    - installs deps, verifies the release tag matches `package.json`, and **skips** if that version
      is already on npm (so re-running is safe);
    - runs `prepublishOnly` (`generate-types → lint → test → build`) and publishes with
-     `npm publish --provenance --access public`.
+     `npm publish` via **trusted publishing**.
 
-## One-time setup
+## One-time setup (trusted publishing)
 
-- Add an `NPM_TOKEN` repository secret — an npm **Automation** or **Granular Access** token with
-  publish rights to `@kolegaai/cli` (Settings → Secrets and variables → Actions).
-- Provenance requires `id-token: write` (already set in the workflow) and a **public** repository.
+This repo uses npm **trusted publishing** (OIDC) — there is **no `NPM_TOKEN`** to create, store, or
+rotate. npm authenticates the workflow via GitHub's OIDC token. Configure it once on the package:
+
+1. npmjs.com → the `@kolegaai/cli` package → **Settings** → **Trusted Publisher**.
+2. Add a **GitHub Actions** publisher:
+   - Organization or user: `kolega-ai`
+   - Repository: `kolega-dev-cli`
+   - Workflow filename: `publish.yml`
+   - Environment: leave blank (the workflow defines none).
+
+The workflow already grants `id-token: write`; provenance attestations are generated automatically
+(the repository is public).
 
 ## Manual publish (fallback)
 

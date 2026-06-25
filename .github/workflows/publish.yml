@@ -19,6 +19,10 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing (OIDC) requires a recent npm; Node 22 ships npm 10.
+      - name: Upgrade npm (for trusted publishing)
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm ci
 
@@ -43,10 +47,12 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # `npm publish` runs the prepublishOnly hook (generate-types -> lint -> test
-      # -> build), so the published artifact is regenerated and validated here.
+      # Trusted publishing: npm authenticates via the GitHub OIDC token
+      # (requires `id-token: write`) — no NPM_TOKEN — and generates provenance
+      # automatically. Configure the trusted publisher in the npm package
+      # settings (repo: kolega-ai/kolega-dev-cli, workflow: publish.yml).
+      # `npm publish` also runs prepublishOnly (generate-types -> lint -> test
+      # -> build), regenerating and validating the artifact here.
       - name: Publish to npm
         if: steps.check.outputs.publish == 'true'
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
