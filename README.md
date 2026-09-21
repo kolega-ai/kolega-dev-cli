@@ -147,6 +147,58 @@ kolega quota
 
 Shows your current-period usage for PRs, SAST scans, deep AI scans, and repository slots.
 
+## MCP Server (Claude Code, Cursor, Claude Desktop)
+
+The CLI ships a [Model Context Protocol](https://modelcontextprotocol.io) server so coding agents can
+scan repositories, triage findings, run AI autofixes and open pull requests directly from your
+editor. It runs locally over stdio and reuses the same credentials as the CLI — authenticate once
+with `kolega auth login` (or set `KOLEGA_TOKEN`) and every tool call is made on behalf of your
+organization's API key.
+
+```sh
+# Claude Code
+claude mcp add kolega -- npx -y @kolegaai/cli mcp
+
+# Or, if the CLI is installed globally
+claude mcp add kolega -- kolega mcp
+```
+
+For Cursor, Claude Desktop, Windsurf and other clients that read a JSON config:
+
+```json
+{
+  "mcpServers": {
+    "kolega": {
+      "command": "npx",
+      "args": ["-y", "@kolegaai/cli", "mcp"],
+      "env": { "KOLEGA_TOKEN": "kcp_live_..." }
+    }
+  }
+}
+```
+
+The `env` block is optional — omit it to use the token stored by `kolega auth login`. Set
+`KOLEGA_API_URL` the same way to point at a non-production API.
+
+### Tools
+
+| Tool                                                                        | What it does                                                     |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `whoami`, `get_quota`                                                       | Identity behind the token; remaining scans/PRs/repository slots  |
+| `list_repositories`, `get_repository`                                       | Repositories and their attached source repos                     |
+| `list_scans`, `start_scan`, `get_scan_progress`, `get_scan_results`         | Run and monitor secrets / SAST / deep AI / SBOM scans            |
+| `list_findings`, `get_finding`, `set_finding_status`, `list_finding_events` | Read and triage findings; audit trail                            |
+| `list_fixes`, `run_fix`, `get_fix`, `get_fix_progress`, `get_fix_diff`      | Start an AI autofix and inspect the resulting diff               |
+| `refine_fix`, `cancel_fix`, `create_pull_request`                           | Iterate on a fix, stop it, or open a PR on the source repository |
+
+Every `repository_id` accepts `default` (see the tip under Repositories). Scans and fixes are
+asynchronous: `start_scan`, `run_fix`, `refine_fix` and the `*_progress` tools take an optional
+`wait_seconds` (max 120) to block briefly and return the latest progress; agents should poll the
+progress tools until the status is terminal rather than assume completion.
+
+Read-only tools are annotated `readOnlyHint` so clients can auto-approve them; `create_pull_request`
+is flagged as an open-world action because it publishes to your source repository.
+
 ## Global Flags
 
 | Flag              | Env var          | Description                                                   |
