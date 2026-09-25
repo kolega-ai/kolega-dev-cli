@@ -10,6 +10,7 @@ import { registerScansCommands } from "./commands/scans.js";
 import { registerFindingsCommands } from "./commands/findings.js";
 import { registerFixesCommands } from "./commands/fixes.js";
 import { registerQuotaCommand } from "./commands/quota.js";
+import { registerMcpCommand } from "./commands/mcp.js";
 import { handleError } from "./ui/errors.js";
 
 async function loadVersion(): Promise<string> {
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
   registerFindingsCommands(program, version);
   registerFixesCommands(program, version);
   registerQuotaCommand(program, version);
+  registerMcpCommand(program, version);
 
   await program.parseAsync(process.argv);
 }
