@@ -7,7 +7,8 @@
  *
  * The server is transport-agnostic: `createMcpServer` takes an already
  * authenticated `ApiClient` and returns an `McpServer`. The `kolega mcp`
- * command wires it to stdio; tests wire it to an in-memory transport.
+ * command wires it to stdio; tests wire it to an in-memory transport; the
+ * hosted server (`@kolegaai/cli/mcp`) builds one per HTTP request.
  *
  * Design notes:
  * - Every tool returns the raw API JSON as text so the agent sees exactly
@@ -65,7 +66,14 @@ export interface McpServerOptions {
   /** Injected for tests so polling runs in zero wall-clock time. */
   sleep?: (ms: number) => Promise<void>;
   pollIntervalMs?: number;
+  /**
+   * What to tell the agent when the API rejects the token. Defaults to the
+   * local CLI advice; the hosted server swaps in advice to reconnect.
+   */
+  reauthHint?: string;
 }
+
+export const DEFAULT_REAUTH_HINT = "Run `kolega auth login` or set KOLEGA_TOKEN.";
 
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,6 +115,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
   const { client, version } = options;
   const sleep = options.sleep ?? defaultSleep;
   const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+  const reauthHint = options.reauthHint ?? DEFAULT_REAUTH_HINT;
 
   const server = new McpServer(
     { name: MCP_SERVER_NAME, version },
@@ -124,7 +133,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     try {
       return ok(await fn());
     } catch (err) {
-      return fail(err);
+      return fail(err, reauthHint);
     }
   };
 
@@ -638,8 +647,8 @@ function ok(data: unknown): CallToolResult {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
-export function fail(err: unknown): CallToolResult {
-  return { isError: true, content: [{ type: "text", text: describeError(err) }] };
+export function fail(err: unknown, reauthHint: string = DEFAULT_REAUTH_HINT): CallToolResult {
+  return { isError: true, content: [{ type: "text", text: describeError(err, reauthHint) }] };
 }
 
 /**
@@ -647,7 +656,7 @@ export function fail(err: unknown): CallToolResult {
  * ApiClient already strips it — but we also avoid dumping raw response
  * bodies beyond the structured `detail` the API returns.
  */
-export function describeError(err: unknown): string {
+export function describeError(err: unknown, reauthHint: string = DEFAULT_REAUTH_HINT): string {
   if (err instanceof ApiError) {
     if (err.errorCode === "OPERATION_FAILED" && err.quotaType) {
       const detail = err.detail as { period_end?: string } | undefined;
@@ -655,7 +664,7 @@ export function describeError(err: unknown): string {
       return `Quota exhausted: no ${err.quotaType} remaining for this period.${when}`;
     }
     if (err.status === 401) {
-      return "Not authenticated: the Kolega API token is missing, expired or revoked. Run `kolega auth login` or set KOLEGA_TOKEN.";
+      return `Not authenticated: the Kolega API token is missing, expired or revoked. ${reauthHint}`;
     }
     if (err.status === 403) {
       return `Forbidden: ${err.message} (the API key may lack the required scope).`;

@@ -1,6 +1,6 @@
 {
   "name": "@kolegaai/cli",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Command-line interface for the Kolega DevSec public API.",
   "license": "MIT",
   "repository": {
@@ -17,6 +17,13 @@
   "type": "module",
   "bin": {
     "kolega": "./dist/cli.js"
+  },
+  "exports": {
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
