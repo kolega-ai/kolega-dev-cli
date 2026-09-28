@@ -346,6 +346,12 @@ describe("describeError", () => {
     expect(msg).toContain("KOLEGA_TOKEN");
   });
 
+  it("uses a caller-supplied re-auth hint (hosted server)", () => {
+    const msg = describeError(new ApiError("Unauthorized", { status: 401 }), "Reconnect Kolega.");
+    expect(msg).toContain("Reconnect Kolega.");
+    expect(msg).not.toContain("kolega auth login");
+  });
+
   it("never echoes a token that appears in an error message context", () => {
     const msg = describeError(new Error("boom"));
     expect(msg).toBe("boom");

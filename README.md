@@ -199,6 +199,18 @@ progress tools until the status is terminal rather than assume completion.
 Read-only tools are annotated `readOnlyHint` so clients can auto-approve them; `create_pull_request`
 is flagged as an open-world action because it publishes to your source repository.
 
+### Using the tools as a library
+
+The same tool set is importable, for example to serve it over a different MCP transport. The entry
+point has no CLI dependencies and never reads the local config file:
+
+```ts
+import { ApiClient, buildUserAgent, createMcpServer } from "@kolegaai/cli/mcp";
+
+const client = new ApiClient({ baseUrl, token, userAgent: buildUserAgent(version) });
+const server = createMcpServer({ client, version, reauthHint: "Reconnect Kolega in your client." });
+```
+
 ## Global Flags
 
 | Flag              | Env var          | Description                                                   |
