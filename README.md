@@ -113,11 +113,13 @@ kolega scans results <repo-id> <scan-id>
 ```sh
 kolega findings list <repo-id> [--severity <s>] [--status <s>] [--scan-batch-id <id>]
 kolega findings get <repo-id> <finding-id>
-kolega findings set-status <repo-id> <finding-id> [status]
+kolega findings set-status <repo-id> <finding-id> [status] [--reason <text>]
 kolega findings events [--repo <id>] [--finding <id>] [--event-type <t>] [--since <iso>] [--until <iso>]
 ```
 
 Omit the status argument on `set-status` and you'll be prompted interactively. Valid statuses: `open`, `resolved`, `ignored`, `false_positive`, `needs_manual_review`.
+
+`--reason` records why the status changed in the finding's audit trail. An organization can require one to close a finding (`resolved`, `ignored` or `false_positive`); without it the command fails and asks for `--reason`.
 
 `findings events` lists the finding lifecycle audit trail (newest first) across the organization, optionally filtered to a single repository or finding.
 
@@ -195,6 +197,9 @@ Every `repository_id` accepts `default` (see the tip under Repositories). Scans 
 asynchronous: `start_scan`, `run_fix`, `refine_fix` and the `*_progress` tools take an optional
 `wait_seconds` (max 120) to block briefly and return the latest progress; agents should poll the
 progress tools until the status is terminal rather than assume completion.
+
+`set_finding_status` takes an optional `reason`. An organization can require one to close a finding
+(`resolved`, `ignored` or `false_positive`); the tool then returns an error asking for it.
 
 Read-only tools are annotated `readOnlyHint` so clients can auto-approve them; `create_pull_request`
 is flagged as an open-world action because it publishes to your source repository.

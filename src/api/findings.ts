@@ -41,8 +41,11 @@ export async function setFindingStatus(
   repositoryId: string,
   findingId: string,
   status: FindingStatus,
+  reason?: string,
 ): Promise<Finding> {
-  return client.patch<Finding>(`${base(repositoryId)}/${encodeURIComponent(findingId)}`, {
-    status,
-  });
+  // Organizations can require a reason to close a finding (resolved, ignored,
+  // false_positive). Typed here rather than through the generated schema so the build
+  // does not depend on when the OpenAPI snapshot was last refreshed.
+  const body: { status: FindingStatus; reason?: string } = reason ? { status, reason } : { status };
+  return client.patch<Finding>(`${base(repositoryId)}/${encodeURIComponent(findingId)}`, body);
 }

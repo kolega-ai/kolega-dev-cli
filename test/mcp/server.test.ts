@@ -139,6 +139,65 @@ describe("createMcpServer", () => {
     expect(calls[0]?.body).toEqual({ status: "false_positive" });
   });
 
+  it("sends a reason with set_finding_status when one is given", async () => {
+    const { client, calls } = stubClient({
+      "PATCH /api/v1/repositories/repo-1/findings/f-9": (call) => ({
+        id: "f-9",
+        ...(call.body as object),
+      }),
+    });
+    const { mcp } = await connect(client);
+    const { tools } = await mcp.listTools();
+    const tool = tools.find((t) => t.name === "set_finding_status");
+    expect(Object.keys(tool?.inputSchema.properties ?? {})).toContain("reason");
+    expect(tool?.inputSchema.required).not.toContain("reason");
+
+    const result = await mcp.callTool({
+      name: "set_finding_status",
+      arguments: {
+        repository_id: "repo-1",
+        finding_id: "f-9",
+        status: "ignored",
+        reason: "  Internal tool behind the VPN  ",
+      },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(calls[0]?.body).toEqual({ status: "ignored", reason: "Internal tool behind the VPN" });
+  });
+
+  it("rejects a blank or overlong reason before hitting the API", async () => {
+    const { client, calls } = stubClient({});
+    const { mcp } = await connect(client);
+    for (const reason of ["   ", "x".repeat(1001)]) {
+      const result = await mcp.callTool({
+        name: "set_finding_status",
+        arguments: { repository_id: "repo-1", finding_id: "f-9", status: "ignored", reason },
+      });
+      expect(result.isError).toBe(true);
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it("tells the agent to retry with a reason when the organization requires one", async () => {
+    const { client } = stubClient({
+      "PATCH /api/v1/repositories/repo-1/findings/f-9": () => {
+        throw new ApiError("A reason is required to close a finding in this organization.", {
+          status: 400,
+          errorCode: "FINDING_CLOSURE_REASON_REQUIRED",
+        });
+      },
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "set_finding_status",
+      arguments: { repository_id: "repo-1", finding_id: "f-9", status: "ignored" },
+    });
+    expect(result.isError).toBe(true);
+    expect(text(result)).toBe(
+      'A reason is required to close a finding in this organization. Call set_finding_status again with a "reason" explaining why the finding is being closed.',
+    );
+  });
+
   it("rejects an invalid finding status before hitting the API", async () => {
     const { client, calls } = stubClient({});
     const { mcp } = await connect(client);

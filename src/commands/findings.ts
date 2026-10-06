@@ -13,7 +13,15 @@ import {
 } from "../ui/render.js";
 import { handleError } from "../ui/errors.js";
 import { buildContext, type GlobalOptions } from "./context.js";
-import { FINDING_STATUSES, type FindingStatus } from "../api/types.js";
+import {
+  FINDING_STATUS_REASON_MAX_LENGTH,
+  FINDING_STATUSES,
+  type FindingStatus,
+} from "../api/types.js";
+
+interface SetStatusOpts {
+  reason?: string;
+}
 
 interface ListOpts {
   severity?: string;
@@ -93,9 +101,26 @@ export function registerFindingsCommands(program: Command, pkgVersion: string): 
   findings
     .command("set-status <repository-id> <finding-id> [status]")
     .description("Update a finding's status (prompts if omitted)")
+    .option(
+      "--reason <text>",
+      "why the status is being set; some organizations require it to close a finding",
+    )
     .action(
-      async (repositoryId: string, findingId: string, status: string | undefined, _opts, cmd) => {
+      async (
+        repositoryId: string,
+        findingId: string,
+        status: string | undefined,
+        opts: SetStatusOpts,
+        cmd,
+      ) => {
         try {
+          const reason = opts.reason?.trim() || undefined;
+          if (reason && reason.length > FINDING_STATUS_REASON_MAX_LENGTH) {
+            throw new Error(
+              `--reason is too long (${reason.length} characters; the limit is ${FINDING_STATUS_REASON_MAX_LENGTH}).`,
+            );
+          }
+
           const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
           const ctx = await buildContext(globals, pkgVersion);
           const resolved = await resolveRepositoryId(ctx.client, repositoryId);
@@ -120,7 +145,13 @@ export function registerFindingsCommands(program: Command, pkgVersion: string): 
             finalStatus = answers.status;
           }
 
-          const updated = await setFindingStatus(ctx.client, resolved, findingId, finalStatus);
+          const updated = await setFindingStatus(
+            ctx.client,
+            resolved,
+            findingId,
+            finalStatus,
+            reason,
+          );
           if (globals.json) {
             renderJson(updated);
             return;

@@ -59,6 +59,9 @@ export const FINDING_STATUSES: readonly FindingStatus[] = [
   "needs_manual_review",
 ] as const;
 
+/** Longest `reason` the API accepts with a finding status change. */
+export const FINDING_STATUS_REASON_MAX_LENGTH = 1000;
+
 export const TERMINAL_SCAN_STATUSES: readonly string[] = [
   "completed",
   "succeeded",
