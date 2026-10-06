@@ -43,6 +43,7 @@ import {
   refineFix,
 } from "../api/fixes.js";
 import {
+  FINDING_STATUS_REASON_MAX_LENGTH,
   FINDING_STATUSES,
   SCAN_TYPES,
   TERMINAL_FIX_STATUSES,
@@ -335,17 +336,26 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Set finding status",
       description:
-        "Triage a finding by changing its status. Use false_positive or ignored to dismiss, resolved when fixed, needs_manual_review to flag for a human.",
+        "Triage a finding by changing its status. Use false_positive or ignored to dismiss, resolved when fixed, needs_manual_review to flag for a human. Give a reason when closing a finding (resolved, ignored or false_positive): it is saved to the audit trail, and some organizations require it.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         finding_id: z.string().min(1),
         status: findingStatusSchema,
+        reason: z
+          .string()
+          .trim()
+          .min(1)
+          .max(FINDING_STATUS_REASON_MAX_LENGTH)
+          .optional()
+          .describe(
+            "Why the status is being set, e.g. why this is a false positive or how it was resolved. Required by some organizations to close a finding.",
+          ),
       },
       annotations: { ...WRITE, idempotentHint: true },
     },
-    ({ repository_id, finding_id, status }) =>
+    ({ repository_id, finding_id, status, reason }) =>
       run(async () =>
-        setFindingStatus(client, await resolveRepo(repository_id), finding_id, status),
+        setFindingStatus(client, await resolveRepo(repository_id), finding_id, status, reason),
       ),
   );
 
@@ -668,6 +678,9 @@ export function describeError(err: unknown, reauthHint: string = DEFAULT_REAUTH_
     }
     if (err.status === 403) {
       return `Forbidden: ${err.message} (the API key may lack the required scope).`;
+    }
+    if (err.errorCode === "FINDING_CLOSURE_REASON_REQUIRED") {
+      return `${err.message} Call set_finding_status again with a "reason" explaining why the finding is being closed.`;
     }
     const code = err.errorCode ? ` [${err.errorCode}]` : "";
     const detail =

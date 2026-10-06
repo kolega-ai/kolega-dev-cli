@@ -63,6 +63,12 @@ function handleApiError(err: ApiError): never {
     process.stderr.write(chalk.red(err.message) + "\n");
     process.exit(EXIT_GENERIC);
   }
+  if (err.errorCode === "FINDING_CLOSURE_REASON_REQUIRED") {
+    process.stderr.write(
+      chalk.red(err.message) + "\n" + chalk.dim('Re-run with --reason "<why>".\n'),
+    );
+    process.exit(EXIT_API_ERROR);
+  }
   process.stderr.write(chalk.red(`API error (${err.status}): `) + err.message + "\n");
   process.exit(EXIT_API_ERROR);
 }
