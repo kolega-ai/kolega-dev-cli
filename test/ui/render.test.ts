@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { renderScanResults } from "../../src/ui/render.js";
 import { redactToken, box } from "../../src/ui/tty.js";
 
 describe("tty helpers", () => {
@@ -25,5 +27,71 @@ describe("tty helpers", () => {
       expect(line.startsWith("│")).toBe(true);
       expect(line.endsWith("│")).toBe(true);
     }
+  });
+});
+
+describe("renderScanResults", () => {
+  const capture = (fn: () => void): string => {
+    const chunks: string[] = [];
+    const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      chunks.push(String(chunk));
+      return true;
+    });
+    try {
+      fn();
+    } finally {
+      write.mockRestore();
+    }
+    return chunks.join("");
+  };
+
+  const finding = (id: string, status: string) => ({
+    id,
+    check_id: "js.sqli",
+    title: "SQL injection",
+    file_path: "app/db.js",
+    line_start: 7,
+    line_end: 7,
+    severity: "high",
+    status,
+    message: "Unparameterised query",
+    cwe: [],
+    owasp: [],
+    fingerprint: id,
+  });
+
+  it("shows each finding's status and the per-status counts", () => {
+    const out = capture(() =>
+      renderScanResults({
+        batch_id: "b1",
+        scan_type: "deep_ai_scan",
+        status: "completed",
+        assessment_complete: true,
+        findings_count: 2,
+        status_counts: { open: 1, false_positive: 1 },
+        actionable_severity_counts: { high: 1 },
+        findings: [finding("f1", "open"), finding("f2", "false_positive")],
+      }),
+    );
+    expect(out).toContain("2 (1 open, 1 false_positive)");
+    expect(out).toContain("1 high");
+    expect(out).toContain("app/db.js:7");
+    expect(out).toContain("false_positive");
+    expect(out).not.toContain("aren't final");
+  });
+
+  it("warns while assessment is still running", () => {
+    const out = capture(() =>
+      renderScanResults({
+        batch_id: "b1",
+        scan_type: "deep_ai_scan",
+        status: "assessing",
+        assessment_complete: false,
+        findings_count: 1,
+        status_counts: { open: 1 },
+        findings: [finding("f1", "open")],
+      }),
+    );
+    expect(out).toContain("aren't final");
   });
 });

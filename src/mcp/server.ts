@@ -66,7 +66,8 @@ import {
 export const MCP_SERVER_NAME = "kolega-devsec";
 
 /** Upper bound on how long a single tool call may block polling. */
-export const MAX_WAIT_SECONDS = 120;
+// Below the 60s request timeout many MCP clients default to; call again to keep waiting.
+export const MAX_WAIT_SECONDS = 45;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 
 export interface McpServerOptions {
@@ -109,8 +110,36 @@ const waitSecondsSchema = z
   .max(MAX_WAIT_SECONDS)
   .optional()
   .describe(
-    `Optional. Block up to this many seconds (max ${MAX_WAIT_SECONDS}) polling for completion, then return the latest progress. Omit to return immediately.`,
+    `Optional. Block up to this many seconds (max ${MAX_WAIT_SECONDS}) polling for completion, then return the latest progress; call again to keep waiting. Omit to return immediately.`,
   );
+
+const detailSchema = z
+  .boolean()
+  .optional()
+  .describe(
+    "Return full finding objects. By default each finding is compact: id, severity, status, title, file_path, line_start, check_id.",
+  );
+
+interface FindingLike {
+  id?: string;
+  severity: string;
+  status?: string;
+  title?: string | null;
+  message: string;
+  file_path: string;
+  line_start?: number | null;
+  check_id: string;
+}
+
+const compactFinding = (f: FindingLike) => ({
+  id: f.id,
+  severity: f.severity,
+  status: f.status,
+  title: f.title || (f.message.length > 120 ? `${f.message.slice(0, 119)}…` : f.message),
+  file_path: f.file_path,
+  line_start: f.line_start ?? null,
+  check_id: f.check_id,
+});
 
 const scanTypeSchema = z
   .enum(SCAN_TYPES as [ScanType, ...ScanType[]])
@@ -322,9 +351,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get scan progress",
       description:
-        "Progress and status of a scan batch. Terminal statuses: " +
-        TERMINAL_SCAN_STATUSES.join(", ") +
-        ". Poll this until the status is terminal, then call get_scan_results.",
+        "Progress and status of a scan batch. Poll this until the batch status is completed, partial_failure or failed, then call get_scan_results. Go by the batch's own status: its repositories reach succeeded first, while AI assessment is still triaging the findings, and their findings_count is raw detections before de-duplication and triage, so it can differ from the results.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         scan_id: z.string().min(1).describe("Scan batch id (batch_id from start_scan/list_scans)."),
@@ -345,15 +372,19 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get scan results",
       description:
-        "Findings summary for a completed scan batch. For full finding detail use list_findings with scan_batch_id.",
+        "Findings for a scan batch, each with its status: open and needs_manual_review need attention; false_positive, ignored and resolved do not (AI assessment marks false positives). Report open findings separately from dismissed ones. status_counts, severity_counts and actionable_severity_counts (open or needs_manual_review only) give the totals. If assessment_complete is false the scan is still running or being assessed, so more findings may appear and statuses may change: wait with get_scan_progress first. Use a finding's id with get_finding or run_fix.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         scan_id: z.string().min(1).describe("Scan batch id."),
+        detail: detailSchema,
       },
       annotations: READ_ONLY,
     },
-    ({ repository_id, scan_id }) =>
-      run(async () => getScanResults(client, await resolveRepo(repository_id), scan_id)),
+    ({ repository_id, scan_id, detail }) =>
+      run(async () => {
+        const results = await getScanResults(client, await resolveRepo(repository_id), scan_id);
+        return detail ? results : { ...results, findings: results.findings.map(compactFinding) };
+      }),
   );
 
   // ---- findings ---------------------------------------------------------
@@ -363,28 +394,30 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "List findings",
       description:
-        "List security findings for a repository. Filter by severity (critical, high, medium, low, info), status, scan batch or scan type.",
+        "List security findings for a repository. Filter by severity (critical, high, medium, low, info), status (open and needs_manual_review need attention), scan batch or scan type. Use get_finding for one finding in full.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         severity: z.string().optional().describe("critical | high | medium | low | info"),
         status: findingStatusSchema.optional(),
         scan_batch_id: z.string().optional().describe("Only findings from this scan batch."),
         scan_type: scanTypeSchema.optional(),
+        detail: detailSchema,
         ...paginationSchema,
       },
       annotations: READ_ONLY,
     },
-    ({ repository_id, severity, status, scan_batch_id, scan_type, limit, skip }) =>
-      run(async () =>
-        listFindings(client, await resolveRepo(repository_id), {
+    ({ repository_id, severity, status, scan_batch_id, scan_type, detail, limit, skip }) =>
+      run(async () => {
+        const page = await listFindings(client, await resolveRepo(repository_id), {
           severity,
           status,
           scanBatchId: scan_batch_id,
           scanType: scan_type,
           limit,
           skip,
-        }),
-      ),
+        });
+        return detail ? page : { ...page, items: page.items.map(compactFinding) };
+      }),
   );
 
   server.registerTool(
@@ -392,7 +425,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get finding",
       description:
-        "Full detail for one finding: file, line, CWE, description, remediation guidance and AI assessment.",
+        "Full detail for one finding: status, file and lines, description, CWE/OWASP, references and CVSS.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         finding_id: z.string().min(1),
