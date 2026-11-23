@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { ApiError } from "../api/client.js";
 import { DeviceFlowError } from "../api/auth-device-flow.js";
+import { DAILY_CAPACITY_QUOTA_TYPE } from "../api/types.js";
 
 export const EXIT_OK = 0;
 export const EXIT_GENERIC = 1;
@@ -44,6 +45,10 @@ export function handleError(err: unknown): never {
 }
 
 function handleApiError(err: ApiError): never {
+  if (err.errorCode === "OPERATION_FAILED" && err.quotaType === DAILY_CAPACITY_QUOTA_TYPE) {
+    process.stderr.write(chalk.red(err.message) + "\n");
+    process.exit(EXIT_QUOTA_EXHAUSTED);
+  }
   if (err.errorCode === "OPERATION_FAILED" && err.quotaType) {
     const periodEnd = extractPeriodEnd(err.detail);
     const when = periodEnd ? ` Period resets on ${periodEnd}.` : "";

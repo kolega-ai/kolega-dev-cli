@@ -5,6 +5,7 @@ import { ApiClient, buildUserAgent } from "../../src/api/client.js";
 import { getMe } from "../../src/api/me.js";
 import { listFindingEvents } from "../../src/api/finding-events.js";
 import { cancelFix, refineFix } from "../../src/api/fixes.js";
+import { addPublicRepository } from "../../src/api/repositories.js";
 
 const BASE = "https://api.example.test";
 let mockAgent: MockAgent;
@@ -126,5 +127,38 @@ describe("new public API endpoints", () => {
 
     const fix = await cancelFix(makeClient(), "repo-1", "fix-1");
     expect(fix.status).toBe("cancelled");
+  });
+
+  it("addPublicRepository posts the repository and branch", async () => {
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/repositories/public", method: "POST" })
+      .reply((req) => {
+        expect(JSON.parse(String(req.body))).toEqual({ repository: "octo/hello", branch: "dev" });
+        return {
+          statusCode: 201,
+          data: JSON.stringify({
+            id: "repo-pub",
+            name: "octo/hello",
+            archived: false,
+            public_repository: true,
+            repositories: [{ full_name: "octo/hello", default_branch: "dev", provider: "github" }],
+            created_at: "2026-06-20T10:00:00Z",
+            updated_at: "2026-06-20T10:00:00Z",
+            created: true,
+            app_url: "https://app.example.test/repositories/repo-pub/scans?org=org-1",
+          }),
+          responseOptions: { headers: { "content-type": "application/json" } },
+        };
+      });
+
+    const added = await addPublicRepository(makeClient(), {
+      repository: "octo/hello",
+      branch: "dev",
+    });
+    expect(added.id).toBe("repo-pub");
+    expect(added.created).toBe(true);
+    expect(added.public_repository).toBe(true);
+    expect(added.app_url).toContain("/repositories/repo-pub/scans");
   });
 });

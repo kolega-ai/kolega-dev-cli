@@ -6,9 +6,31 @@ import type { components } from "./openapi-types.generated.js";
 
 type Schemas = components["schemas"];
 
-export type Repository = Schemas["PublicRepositoryResponse"];
+// `public_repository` and the add-public-repository endpoint are typed here until the
+// published OpenAPI schema includes them.
+export type Repository = Schemas["PublicRepositoryResponse"] & {
+  /** True for a public repository added for scanning rather than the organization's own code. */
+  public_repository?: boolean;
+};
 export type RepositoryRef = Schemas["PublicRepositoryRef"];
-export type RepositoryListResponse = Schemas["PublicPaginatedResponse_PublicRepositoryResponse_"];
+export type RepositoryListResponse = Omit<
+  Schemas["PublicPaginatedResponse_PublicRepositoryResponse_"],
+  "items"
+> & { items: Repository[] };
+
+export interface PublicRepositoryAddRequest {
+  /** owner/repo or a github.com URL. */
+  repository: string;
+  /** Branch to scan; defaults to the repository's default branch. */
+  branch?: string;
+}
+
+export type PublicRepositoryAddResponse = Repository & {
+  /** False when the repository had already been added. */
+  created: boolean;
+  /** Web app page for this repository's scans and findings. */
+  app_url: string;
+};
 
 export type Me = Schemas["PublicMeResponse"];
 
@@ -40,9 +62,19 @@ export type FixPullRequestSummary = Schemas["PublicFixPullRequestSummary"];
 export type CreatePullRequestsRequest = Schemas["PublicCreatePRRequest"];
 export type CreatedPullRequestsResponse = Schemas["PublicPullRequestsCreatedResponse"];
 
-export type QuotaBalance = Schemas["PublicQuotaBalanceResponse"];
 export type QuotaCounter = Schemas["PublicQuotaCounter"];
+/** Typed locally until the published schema has the public-repository counters. */
+export type QuotaBalance = Schemas["PublicQuotaBalanceResponse"] & {
+  public_sast_scans?: QuotaCounter;
+  public_deep_ai_scans?: QuotaCounter;
+};
 export type RepositoryQuota = Schemas["PublicRepositoryQuota"];
+
+/**
+ * `quota_type` of a service-wide daily limit on public-repository deep scans. Unlike the
+ * organization's own quota it doesn't reset with the billing period, so the API's message is shown.
+ */
+export const DAILY_CAPACITY_QUOTA_TYPE = "public_repo_daily_capacity";
 
 export const SCAN_TYPES: readonly ScanType[] = [
   "secrets_scan",

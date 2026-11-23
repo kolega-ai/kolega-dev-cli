@@ -85,6 +85,7 @@ describe("createMcpServer", () => {
         "list_scans",
         "refine_fix",
         "run_fix",
+        "scan_public_repo",
         "set_finding_status",
         "start_scan",
         "whoami",
@@ -95,6 +96,8 @@ describe("createMcpServer", () => {
     expect(byName.start_scan!.annotations?.readOnlyHint).toBe(false);
     expect(byName.cancel_fix!.annotations?.destructiveHint).toBe(true);
     expect(byName.create_pull_request!.annotations?.openWorldHint).toBe(true);
+    expect(byName.scan_public_repo!.annotations?.readOnlyHint).toBe(false);
+    expect(byName.scan_public_repo!.annotations?.openWorldHint).toBe(true);
     // Every tool must carry a description — that's what the agent reasons over.
     for (const tool of tools) expect(tool.description?.length ?? 0).toBeGreaterThan(20);
   });
@@ -242,6 +245,122 @@ describe("createMcpServer", () => {
     expect(parsed.batch.batch_id).toBe("b-1");
     expect(parsed.progress.status).toBe("completed");
     expect(calls.filter((c) => c.path.endsWith("/progress"))).toHaveLength(3);
+  });
+
+  const PUBLIC_REPO = {
+    id: "repo-pub",
+    name: "octo/hello",
+    archived: false,
+    public_repository: true,
+    repositories: [{ full_name: "octo/hello", default_branch: "main", provider: "github" }],
+    created: true,
+    app_url: "https://app.example.test/repositories/repo-pub/scans?org=org-1",
+  };
+
+  it("scan_public_repo adds the repository then starts a deep scan by default", async () => {
+    const { client, calls } = stubClient({
+      "POST /api/v1/repositories/public": () => PUBLIC_REPO,
+      "POST /api/v1/repositories/repo-pub/scans": () => ({
+        batch_id: "b-9",
+        scan_type: "deep_ai_scan",
+        status: "queued",
+      }),
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "scan_public_repo",
+      arguments: { repository: "https://github.com/octo/hello" },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(calls[0]?.body).toEqual({ repository: "https://github.com/octo/hello" });
+    expect(calls[1]?.body).toEqual({ scan_type: "deep_ai_scan" });
+    const parsed = JSON.parse(text(result));
+    expect(parsed).toMatchObject({
+      repository_id: "repo-pub",
+      repository: "octo/hello",
+      repository_added: true,
+      scan_id: "b-9",
+      scan_type: "deep_ai_scan",
+      status: "queued",
+      app_url: PUBLIC_REPO.app_url,
+    });
+    expect(parsed.next_step).toContain("get_scan_progress");
+    expect(parsed.next_step).toContain('"b-9"');
+  });
+
+  it("scan_public_repo passes branch and scan type, and can wait for completion", async () => {
+    const { client, calls } = stubClient({
+      "POST /api/v1/repositories/public": () => ({ ...PUBLIC_REPO, created: false }),
+      "POST /api/v1/repositories/repo-pub/scans": () => ({
+        batch_id: "b-9",
+        scan_type: "semgrep_scan",
+        status: "queued",
+      }),
+      "GET /api/v1/repositories/repo-pub/scans/b-9/progress": () => ({
+        batch_id: "b-9",
+        status: "completed",
+      }),
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "scan_public_repo",
+      arguments: {
+        repository: "octo/hello",
+        branch: "dev",
+        scan_type: "semgrep_scan",
+        wait_seconds: 10,
+      },
+    });
+
+    expect(calls[0]?.body).toEqual({ repository: "octo/hello", branch: "dev" });
+    expect(calls[1]?.body).toEqual({ scan_type: "semgrep_scan" });
+    const parsed = JSON.parse(text(result));
+    expect(parsed.repository_added).toBe(false);
+    expect(parsed.progress.status).toBe("completed");
+  });
+
+  it("scan_public_repo reports private repositories as tool errors", async () => {
+    const { client, calls } = stubClient({
+      "POST /api/v1/repositories/public": () => {
+        throw new ApiError(
+          "This repository is private. Connect GitHub to scan private repositories.",
+          { status: 424, errorCode: "EXTERNAL_SERVICE_ERROR" },
+        );
+      },
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "scan_public_repo",
+      arguments: { repository: "octo/secret" },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain("This repository is private");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("scan_public_repo keeps the repository id when the scan cannot start", async () => {
+    const { client } = stubClient({
+      "POST /api/v1/repositories/public": () => PUBLIC_REPO,
+      "POST /api/v1/repositories/repo-pub/scans": () => {
+        throw new ApiError("Quota exceeded", {
+          status: 403,
+          errorCode: "OPERATION_FAILED",
+          quotaType: "deep_scans",
+        });
+      },
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "scan_public_repo",
+      arguments: { repository: "octo/hello" },
+    });
+
+    expect(result.isError).toBe(true);
+    const message = text(result);
+    expect(message).toContain('octo/hello was added as repository_id "repo-pub"');
+    expect(message).toContain("Quota exhausted: no deep_scans remaining");
   });
 
   it("get_scan_progress with wait_seconds gives up at the deadline and returns latest", async () => {
@@ -396,6 +515,17 @@ describe("describeError", () => {
     });
     expect(describeError(err)).toBe(
       "Quota exhausted: no deep_ai_scans remaining for this period. Quota resets at 2026-10-01T00:00:00Z.",
+    );
+  });
+
+  it("passes through the message for the daily public-repo capacity limit", () => {
+    const err = new ApiError("Deep scans of public repositories are at capacity for today.", {
+      status: 403,
+      errorCode: "OPERATION_FAILED",
+      quotaType: "public_repo_daily_capacity",
+    });
+    expect(describeError(err)).toBe(
+      "Limit reached: Deep scans of public repositories are at capacity for today.",
     );
   });
 

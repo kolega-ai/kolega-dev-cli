@@ -180,6 +180,150 @@ describe("scans API wrappers", () => {
     mockAgent.assertNoPendingInterceptors();
   });
 
+  it("scans public adds the repository then starts a deep scan by default", async () => {
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/repositories/public", method: "POST" })
+      .reply((req) => {
+        expect(JSON.parse(String(req.body))).toEqual({ repository: "octo/hello" });
+        return {
+          statusCode: 201,
+          data: JSON.stringify({
+            id: "repo-pub",
+            name: "octo/hello",
+            archived: false,
+            public_repository: true,
+            repositories: [{ full_name: "octo/hello", default_branch: "main", provider: "github" }],
+            created_at: "2026-04-15T10:00:00Z",
+            updated_at: "2026-04-15T10:00:00Z",
+            created: true,
+            app_url: "https://app.example.test/repositories/repo-pub/scans?org=org-1",
+          }),
+          responseOptions: { headers: { "content-type": "application/json" } },
+        };
+      });
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/repositories/repo-pub/scans", method: "POST" })
+      .reply((req) => {
+        expect(JSON.parse(String(req.body))).toEqual({ scan_type: "deep_ai_scan" });
+        return {
+          statusCode: 202,
+          data: JSON.stringify({
+            batch_id: "batch-pub",
+            repository_id: "repo-pub",
+            scan_type: "deep_ai_scan",
+            status: "queued",
+            total_repositories: 1,
+            scans_created: 0,
+            scans_failed: 0,
+            scans_completed: 0,
+            scans_assessed: 0,
+            created_at: "2026-04-15T10:00:00Z",
+          }),
+          responseOptions: { headers: { "content-type": "application/json" } },
+        };
+      });
+
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await makeProgram().parseAsync([
+      "node",
+      "kolega",
+      "--api-url",
+      BASE,
+      "--json",
+      "scans",
+      "public",
+      "octo/hello",
+      "--no-quota-check",
+    ]);
+
+    const printed = JSON.parse(stdoutWrite.mock.calls.map((c) => String(c[0])).join(""));
+    expect(printed.repository.id).toBe("repo-pub");
+    expect(printed.scan.batch_id).toBe("batch-pub");
+    mockAgent.assertNoPendingInterceptors();
+  });
+
+  it("scans public checks the public-repository allowance, not the organization's own", async () => {
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/quotas/balance", method: "GET" })
+      .reply(200, {
+        period_start: "2026-04-01T00:00:00Z",
+        period_end: "2026-05-01T00:00:00Z",
+        prs: { plan: 0, topup: 0, used: 0, remaining: 0 },
+        sast_scans: { plan: 20, topup: 0, used: 0, remaining: 20 },
+        deep_ai_scans: { plan: 4, topup: 0, used: 0, remaining: 4 },
+        public_sast_scans: { plan: 20, topup: 0, used: 0, remaining: 20 },
+        public_deep_ai_scans: { plan: 3, topup: 0, used: 3, remaining: 0 },
+        repositories: { max: 10, current: 0 },
+      });
+    const exit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    await makeProgram().parseAsync([
+      "node",
+      "kolega",
+      "--api-url",
+      BASE,
+      "scans",
+      "public",
+      "octo/hello",
+    ]);
+
+    expect(stderrWrite.mock.calls.map((c) => String(c[0])).join("")).toContain(
+      "public_deep_ai_scans",
+    );
+    expect(exit).toHaveBeenCalled();
+    mockAgent.assertNoPendingInterceptors();
+  });
+
+  it("scans public shows the API's message for the daily capacity limit", async () => {
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/repositories/public", method: "POST" })
+      .reply(200, {
+        id: "repo-pub",
+        name: "octo/hello",
+        archived: false,
+        repositories: [],
+        created_at: "2026-04-15T10:00:00Z",
+        updated_at: "2026-04-15T10:00:00Z",
+        created: false,
+        app_url: "https://app.example.test/repositories/repo-pub/scans?org=org-1",
+      });
+    mockAgent
+      .get(BASE)
+      .intercept({ path: "/api/v1/repositories/repo-pub/scans", method: "POST" })
+      .reply(403, {
+        detail: {
+          detail: "Deep scans of public repositories are at capacity for today.",
+          error_code: "OPERATION_FAILED",
+          quota_type: "public_repo_daily_capacity",
+        },
+      });
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`process.exit:${code ?? ""}`);
+    });
+
+    await expect(
+      makeProgram().parseAsync([
+        "node",
+        "kolega",
+        "--api-url",
+        BASE,
+        "scans",
+        "public",
+        "octo/hello",
+        "--no-quota-check",
+      ]),
+    ).rejects.toThrow("process.exit:3");
+
+    expect(stderrWrite.mock.calls.join("")).toContain("at capacity for today");
+  });
+
   it("reports the expanded scan type list for unknown scan types", async () => {
     const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
