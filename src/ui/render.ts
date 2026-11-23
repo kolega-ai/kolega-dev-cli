@@ -113,11 +113,15 @@ export function renderScanResults(results: ScanResults): void {
   const breakdown = Object.entries(results.status_counts ?? {})
     .map(([status, count]) => `${count} ${status}`)
     .join(", ");
+  const needsAttention = Object.entries(results.actionable_severity_counts ?? {})
+    .map(([severity, count]) => `${count} ${severity}`)
+    .join(", ");
   printKv([
     ["Batch ID", results.batch_id],
     ["Scan type", results.scan_type],
     ["Status", results.status],
     ["Findings", breakdown ? `${results.findings_count} (${breakdown})` : results.findings_count],
+    ["Needs attention", results.actionable_severity_counts ? needsAttention || "none" : null],
   ]);
   if (results.assessment_complete === false) {
     process.stdout.write(
@@ -142,8 +146,8 @@ export function renderScanResults(results: ScanResults): void {
       colorSeverity(f.severity),
       f.status ? colorStatus(f.status) : chalk.dim("—"),
       f.check_id,
-      f.file_path,
-      f.message,
+      fileWithLine(f.file_path, f.line_start),
+      f.title || f.message,
     ]);
   }
   process.stdout.write(table.toString() + "\n");
@@ -166,7 +170,7 @@ export function renderFindingsTable(findings: readonly Finding[]): void {
       colorSeverity(f.severity),
       colorStatus(f.status),
       f.check_id,
-      f.file_path,
+      fileWithLine(f.file_path, f.line_start),
       f.scan_type,
     ]);
   }
@@ -389,6 +393,10 @@ function colorStatus(status: string): string {
     return chalk.yellow(status);
   if (s === "open") return chalk.magenta(status);
   return status;
+}
+
+function fileWithLine(filePath: string, line: number | null | undefined): string {
+  return line ? `${filePath}:${line}` : filePath;
 }
 
 function colorSeverity(severity: string): string {

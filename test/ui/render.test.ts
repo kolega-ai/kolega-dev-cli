@@ -50,6 +50,8 @@ describe("renderScanResults", () => {
     check_id: "js.sqli",
     title: "SQL injection",
     file_path: "app/db.js",
+    line_start: 7,
+    line_end: 7,
     severity: "high",
     status,
     message: "Unparameterised query",
@@ -67,10 +69,13 @@ describe("renderScanResults", () => {
         assessment_complete: true,
         findings_count: 2,
         status_counts: { open: 1, false_positive: 1 },
+        actionable_severity_counts: { high: 1 },
         findings: [finding("f1", "open"), finding("f2", "false_positive")],
       }),
     );
     expect(out).toContain("2 (1 open, 1 false_positive)");
+    expect(out).toContain("1 high");
+    expect(out).toContain("app/db.js:7");
     expect(out).toContain("false_positive");
     expect(out).not.toContain("aren't final");
   });

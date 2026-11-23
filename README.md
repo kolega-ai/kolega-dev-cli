@@ -203,8 +203,15 @@ The `env` block is optional — omit it to use the token stored by `kolega auth 
 
 Every `repository_id` accepts `default` (see the tip under Repositories). Scans and fixes are
 asynchronous: `start_scan`, `run_fix`, `refine_fix` and the `*_progress` tools take an optional
-`wait_seconds` (max 120) to block briefly and return the latest progress; agents should poll the
-progress tools until the status is terminal rather than assume completion.
+`wait_seconds` (max 45, under common MCP client request timeouts) to block briefly and return the
+latest progress; agents should poll the progress tools until the status is terminal rather than
+assume completion.
+
+`get_scan_results` and `list_findings` return compact findings (id, severity, status, title, file,
+line, check) to keep responses small; pass `detail: true` for full finding objects, or use
+`get_finding` for one. Each finding has a status (`false_positive`, `ignored` and `resolved` are
+dismissed), and scan results include per-status and per-severity totals plus
+`assessment_complete`, which stays false until AI assessment has finished.
 
 `scan_public_repo` takes a public GitHub repository (`owner/repo` or a github.com URL), an optional
 `scan_type` (default `deep_ai_scan`) and `branch`. It returns the `repository_id` and `scan_id` to

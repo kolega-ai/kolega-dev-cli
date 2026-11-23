@@ -395,6 +395,89 @@ describe("createMcpServer", () => {
     }
   });
 
+  it("keeps waits under common MCP client request timeouts", () => {
+    expect(MAX_WAIT_SECONDS).toBeLessThanOrEqual(45);
+  });
+
+  describe("compact findings", () => {
+    const longMessage = "x".repeat(400);
+    const FINDING = {
+      id: "f-1",
+      check_id: "js.sqli",
+      title: null,
+      file_path: "app/db.js",
+      line_start: 42,
+      line_end: 44,
+      severity: "high",
+      status: "false_positive",
+      message: longMessage,
+      cwe: ["CWE-89"],
+      owasp: [],
+      fingerprint: "fp",
+    };
+
+    it("get_scan_results returns compact findings unless detail is set", async () => {
+      const results = {
+        batch_id: "b-1",
+        scan_type: "deep_ai_scan",
+        status: "completed",
+        assessment_complete: true,
+        findings_count: 1,
+        status_counts: { false_positive: 1 },
+        findings: [FINDING],
+      };
+      const { client } = stubClient({
+        "GET /api/v1/repositories/repo-1": () => REPO,
+        "GET /api/v1/repositories/repo-1/scans/b-1/results": () => results,
+      });
+      const { mcp } = await connect(client);
+
+      const compact = JSON.parse(
+        text(
+          await mcp.callTool({
+            name: "get_scan_results",
+            arguments: { repository_id: "repo-1", scan_id: "b-1" },
+          }),
+        ),
+      );
+      expect(compact.status_counts).toEqual({ false_positive: 1 });
+      expect(compact.findings[0]).toEqual({
+        id: "f-1",
+        severity: "high",
+        status: "false_positive",
+        title: `${"x".repeat(119)}…`,
+        file_path: "app/db.js",
+        line_start: 42,
+        check_id: "js.sqli",
+      });
+
+      const full = JSON.parse(
+        text(
+          await mcp.callTool({
+            name: "get_scan_results",
+            arguments: { repository_id: "repo-1", scan_id: "b-1", detail: true },
+          }),
+        ),
+      );
+      expect(full.findings[0].message).toBe(longMessage);
+    });
+
+    it("list_findings returns compact items unless detail is set", async () => {
+      const { client } = stubClient({
+        "GET /api/v1/repositories/repo-1": () => REPO,
+        "GET /api/v1/repositories/repo-1/findings": () => ({ items: [FINDING], total: 1 }),
+      });
+      const { mcp } = await connect(client);
+      const page = JSON.parse(
+        text(await mcp.callTool({ name: "list_findings", arguments: { repository_id: "repo-1" } })),
+      );
+      expect(page.total).toBe(1);
+      expect(Object.keys(page.items[0]).sort()).toEqual(
+        ["check_id", "file_path", "id", "line_start", "severity", "status", "title"].sort(),
+      );
+    });
+  });
+
   it("caps wait_seconds at MAX_WAIT_SECONDS via schema validation", async () => {
     const { client, calls } = stubClient({});
     const { mcp } = await connect(client);
