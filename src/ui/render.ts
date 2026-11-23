@@ -266,6 +266,8 @@ export function renderQuota(balance: QuotaBalance): void {
   push("PRs", balance.prs);
   push("SAST scans", balance.sast_scans);
   push("Deep AI scans", balance.deep_ai_scans);
+  if (balance.public_sast_scans) push("Public repo SAST scans", balance.public_sast_scans);
+  if (balance.public_deep_ai_scans) push("Public repo deep AI scans", balance.public_deep_ai_scans);
   process.stdout.write("\n" + table.toString() + "\n");
   process.stdout.write(
     `${chalk.dim("Repositories:")} ${balance.repositories.current}` +

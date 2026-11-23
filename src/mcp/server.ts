@@ -28,7 +28,12 @@ import type { ApiClient } from "../api/client.js";
 import { ApiError } from "../api/client.js";
 import { getMe } from "../api/me.js";
 import { getQuotaBalance } from "../api/quotas.js";
-import { getRepository, listRepositories, resolveRepositoryId } from "../api/repositories.js";
+import {
+  addPublicRepository,
+  getRepository,
+  listRepositories,
+  resolveRepositoryId,
+} from "../api/repositories.js";
 import { getScanProgress, getScanResults, listScans, startScan } from "../api/scans.js";
 import { getFinding, listFindings, setFindingStatus } from "../api/findings.js";
 import { listFindingEvents } from "../api/finding-events.js";
@@ -43,6 +48,7 @@ import {
   refineFix,
 } from "../api/fixes.js";
 import {
+  DAILY_CAPACITY_QUOTA_TYPE,
   FINDING_STATUS_REASON_MAX_LENGTH,
   FINDING_STATUSES,
   SCAN_TYPES,
@@ -51,6 +57,8 @@ import {
   type FindingStatus,
   type FixCreateRequest,
   type FixProgress,
+  type PublicRepositoryAddResponse,
+  type ScanBatch,
   type ScanProgress,
   type ScanType,
 } from "../api/types.js";
@@ -124,6 +132,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
       instructions: [
         "Tools for the Kolega DevSec security platform: repositories, security scans, findings, AI autofixes and pull requests.",
         "Typical flow: list_repositories -> start_scan -> get_scan_progress (poll until terminal) -> list_findings -> run_fix -> get_fix_diff -> create_pull_request.",
+        "To scan any public GitHub repository (e.g. an open-source dependency), use scan_public_repo, then poll get_scan_progress.",
         'Most tools take a repository_id; "default" works when the organization has a single repository.',
         "Scans and fixes run asynchronously on the server. Poll the *_progress tools rather than assuming completion.",
       ].join("\n"),
@@ -159,7 +168,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get quota balance",
       description:
-        "Current-period quota: remaining pull requests, SAST scans, deep AI scans and repository slots. Check this before starting deep AI scans or fixes.",
+        "Current-period quota: remaining pull requests, SAST scans, deep AI scans, scans of public repositories (a separate allowance) and repository slots. Check this before starting deep AI scans or fixes.",
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -243,6 +252,69 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         const progress = await waitForScan(repo, batch.batch_id, wait_seconds);
         return { batch, progress };
       }),
+  );
+
+  server.registerTool(
+    "scan_public_repo",
+    {
+      title: "Scan a public repository",
+      description:
+        "Scan any public GitHub repository, such as an open-source project or dependency, without connecting it first. Adds the repository to the organization (or reuses it if already added) and starts a scan. Public repositories have their own monthly scan allowance (public_sast_scans and public_deep_ai_scans in get_quota), separate from the organization's own repositories. deep_ai_scan (the default) finds more but can take many minutes and uses a public deep-scan credit; semgrep_scan is faster. Returns the repository_id and scan_id to use with get_scan_progress and get_scan_results, plus a link to the results in the web app.",
+      inputSchema: {
+        repository: z
+          .string()
+          .min(1)
+          .max(300)
+          .describe("Public GitHub repository as owner/repo or a github.com URL."),
+        scan_type: scanTypeSchema.optional().describe("Defaults to deep_ai_scan."),
+        branch: z
+          .string()
+          .min(1)
+          .max(255)
+          .optional()
+          .describe("Branch to scan. Defaults to the repository's default branch."),
+        wait_seconds: waitSecondsSchema,
+      },
+      annotations: { ...WRITE, openWorldHint: true },
+    },
+    async ({ repository, scan_type, branch, wait_seconds }) => {
+      let added: PublicRepositoryAddResponse;
+      try {
+        added = await addPublicRepository(client, branch ? { repository, branch } : { repository });
+      } catch (err) {
+        return fail(err, reauthHint);
+      }
+      const source = added.repositories?.[0]?.full_name ?? added.name;
+      let batch: ScanBatch;
+      try {
+        batch = await startScan(client, added.id, { scan_type: scan_type ?? "deep_ai_scan" });
+      } catch (err) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `${source} was added as repository_id "${added.id}", but the scan did not start. ${describeError(err, reauthHint)}`,
+            },
+          ],
+        };
+      }
+      const result = {
+        repository_id: added.id,
+        repository: source,
+        repository_added: added.created,
+        scan_id: batch.batch_id,
+        scan_type: batch.scan_type,
+        status: batch.status,
+        app_url: added.app_url,
+        next_step: `Poll get_scan_progress with repository_id "${added.id}" and scan_id "${batch.batch_id}" until the status is terminal, then call get_scan_results (or list_findings for full detail).`,
+      };
+      if (!wait_seconds) return ok(result);
+      return run(async () => ({
+        ...result,
+        progress: await waitForScan(added.id, batch.batch_id, wait_seconds),
+      }));
+    },
   );
 
   server.registerTool(
@@ -668,6 +740,9 @@ export function fail(err: unknown, reauthHint: string = DEFAULT_REAUTH_HINT): Ca
  */
 export function describeError(err: unknown, reauthHint: string = DEFAULT_REAUTH_HINT): string {
   if (err instanceof ApiError) {
+    if (err.errorCode === "OPERATION_FAILED" && err.quotaType === DAILY_CAPACITY_QUOTA_TYPE) {
+      return `Limit reached: ${err.message}`;
+    }
     if (err.errorCode === "OPERATION_FAILED" && err.quotaType) {
       const detail = err.detail as { period_end?: string } | undefined;
       const when = detail?.period_end ? ` Quota resets at ${detail.period_end}.` : "";

@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 
-import { resolveRepositoryId } from "../api/repositories.js";
+import { addPublicRepository, resolveRepositoryId } from "../api/repositories.js";
 import { getScan, getScanProgress, getScanResults, listScans, startScan } from "../api/scans.js";
 import { getQuotaBalance } from "../api/quotas.js";
 import {
@@ -32,6 +32,13 @@ interface StartOpts {
   quotaCheck: boolean;
 }
 
+interface PublicOpts {
+  type: string;
+  branch?: string;
+  wait?: boolean;
+  quotaCheck: boolean;
+}
+
 interface ProgressOpts {
   watch?: boolean;
   interval?: string;
@@ -51,11 +58,25 @@ const CLI_SCAN_TYPE_MAP: Record<string, ScanType> = {
   sbom_scan: "sbom_scan",
 };
 
-const QUOTA_COUNTER_FOR_SCAN: Record<ScanType, "sast_scans" | "deep_ai_scans"> = {
+type QuotaCounterKey =
+  | "sast_scans"
+  | "deep_ai_scans"
+  | "public_sast_scans"
+  | "public_deep_ai_scans";
+
+const QUOTA_COUNTER_FOR_SCAN: Record<ScanType, QuotaCounterKey> = {
   secrets_scan: "sast_scans",
   semgrep_scan: "sast_scans",
   deep_ai_scan: "deep_ai_scans",
   sbom_scan: "sast_scans",
+};
+
+// Public repositories have their own allowance, separate from the organization's own repositories.
+const PUBLIC_QUOTA_COUNTER_FOR_SCAN: Record<ScanType, QuotaCounterKey> = {
+  secrets_scan: "public_sast_scans",
+  semgrep_scan: "public_sast_scans",
+  deep_ai_scan: "public_deep_ai_scans",
+  sbom_scan: "public_sast_scans",
 };
 
 export function registerScansCommands(program: Command, pkgVersion: string): void {
@@ -125,6 +146,57 @@ export function registerScansCommands(program: Command, pkgVersion: string): voi
           intervalMs: 5000,
           asJson: Boolean(globals.json),
           resumeHint: `kolega scans progress ${repositoryId} ${batch.batch_id}`,
+        });
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  scans
+    .command("public <repository>")
+    .description("Scan any public GitHub repository (owner/repo or a github.com URL)")
+    .option("--type <type>", `scan type: ${SCAN_TYPE_HELP}`, "deep-ai")
+    .option("--branch <branch>", "branch to scan (defaults to the repository's default branch)")
+    .option("--wait", "block and stream progress until the scan is terminal")
+    .option("--no-quota-check", "skip the pre-flight quota check")
+    .action(async (repository: string, opts: PublicOpts, cmd) => {
+      try {
+        const globals = (cmd.parent?.parent?.opts() as GlobalOptions | undefined) ?? {};
+        const ctx = await buildContext(globals, pkgVersion);
+        const scanType = toScanType(opts.type);
+
+        if (opts.quotaCheck) {
+          await assertQuotaAvailable(ctx.client, scanType, { publicRepository: true });
+        }
+
+        const added = await addPublicRepository(
+          ctx.client,
+          opts.branch ? { repository, branch: opts.branch } : { repository },
+        );
+        const batch = await startScan(ctx.client, added.id, { scan_type: scanType });
+        if (globals.json && !opts.wait) {
+          renderJson({ repository: added, scan: batch });
+          return;
+        }
+        if (!globals.json) {
+          const source = added.repositories?.[0]?.full_name ?? added.name;
+          process.stdout.write(
+            chalk.green(added.created ? "Added " : "Using ") +
+              chalk.cyan(source) +
+              chalk.dim(` (repository ${added.id})\n`) +
+              chalk.green("Started scan ") +
+              chalk.cyan(batch.batch_id) +
+              chalk.dim(` (${batch.scan_type})\n`) +
+              chalk.dim(`Results: ${added.app_url}\n`),
+          );
+        }
+        if (!opts.wait) return;
+
+        await pollScanProgress(ctx.client, added.id, batch.batch_id, {
+          mode: "wait",
+          intervalMs: 5000,
+          asJson: Boolean(globals.json),
+          resumeHint: `kolega scans progress ${added.id} ${batch.batch_id}`,
         });
       } catch (err) {
         handleError(err);
@@ -214,14 +286,20 @@ function toScanType(input: string): ScanType {
   throw new Error(`Unknown scan type "${input}". Expected one of: ${SCAN_TYPE_HELP}.`);
 }
 
-async function assertQuotaAvailable(client: ApiClient, scanType: ScanType): Promise<void> {
+async function assertQuotaAvailable(
+  client: ApiClient,
+  scanType: ScanType,
+  { publicRepository = false }: { publicRepository?: boolean } = {},
+): Promise<void> {
   const balance = await getQuotaBalance(client);
-  const counter = balance[QUOTA_COUNTER_FOR_SCAN[scanType]];
-  if (counter.remaining <= 0) {
-    throw new ApiError(`You're out of ${QUOTA_COUNTER_FOR_SCAN[scanType]} for this period.`, {
+  const key = (publicRepository ? PUBLIC_QUOTA_COUNTER_FOR_SCAN : QUOTA_COUNTER_FOR_SCAN)[scanType];
+  const counter = balance[key];
+  // Servers that predate a counter don't report it; let the API decide.
+  if (counter && counter.remaining <= 0) {
+    throw new ApiError(`You're out of ${key} for this period.`, {
       status: 403,
       errorCode: "OPERATION_FAILED",
-      quotaType: QUOTA_COUNTER_FOR_SCAN[scanType],
+      quotaType: key,
       detail: { period_end: balance.period_end },
     });
   }

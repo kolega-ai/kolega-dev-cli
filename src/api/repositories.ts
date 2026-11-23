@@ -1,6 +1,11 @@
 import type { ApiClient } from "./client.js";
 import { ApiError } from "./client.js";
-import type { Repository, RepositoryListResponse } from "./types.js";
+import type {
+  PublicRepositoryAddRequest,
+  PublicRepositoryAddResponse,
+  Repository,
+  RepositoryListResponse,
+} from "./types.js";
 
 export async function listRepositories(
   client: ApiClient,
@@ -17,6 +22,17 @@ export async function listRepositories(
 
 export async function getRepository(client: ApiClient, repositoryId: string): Promise<Repository> {
   return client.get<Repository>(`/api/v1/repositories/${encodeURIComponent(repositoryId)}`);
+}
+
+/**
+ * Adds any public GitHub repository so it can be scanned. Idempotent: adding
+ * the same repository again returns the existing one with `created: false`.
+ */
+export async function addPublicRepository(
+  client: ApiClient,
+  body: PublicRepositoryAddRequest,
+): Promise<PublicRepositoryAddResponse> {
+  return client.post<PublicRepositoryAddResponse>("/api/v1/repositories/public", body);
 }
 
 /**

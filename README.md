@@ -99,6 +99,7 @@ kolega repos get <repository-id>
 ```sh
 kolega scans list <repo-id> [--scan-type <type>] [--status <s>]
 kolega scans start <repo-id> --type <secrets|semgrep|deep-ai|sbom> [--wait]
+kolega scans public <owner/repo|github-url> [--type <type>] [--branch <b>] [--wait]
 kolega scans get <repo-id> <scan-id>
 kolega scans progress <repo-id> <scan-id> [--watch] [--interval <sec>]
 kolega scans results <repo-id> <scan-id>
@@ -107,6 +108,10 @@ kolega scans results <repo-id> <scan-id>
 - **`--wait`** blocks after starting the scan, streaming a live progress bar until it completes. Ctrl+C detaches cleanly (the scan keeps running server-side).
 - **`--watch`** on `progress` polls every 5 s and redraws in-place on TTYs.
 - A **quota pre-check** runs before starting — skip with `--no-quota-check`.
+- **`scans public`** scans any public GitHub repository without connecting it first. It adds the
+  repository to your organization (reusing it if already added), starts a scan (`deep-ai` by
+  default) and prints a link to the results. Public repositories have their own monthly scan
+  allowance, separate from your organization's own repositories (see `kolega quota`).
 
 ### Findings
 
@@ -189,6 +194,7 @@ The `env` block is optional — omit it to use the token stored by `kolega auth 
 | `whoami`, `get_quota`                                                       | Identity behind the token; remaining scans/PRs/repository slots  |
 | `list_repositories`, `get_repository`                                       | Repositories and their attached source repos                     |
 | `list_scans`, `start_scan`, `get_scan_progress`, `get_scan_results`         | Run and monitor secrets / SAST / deep AI / SBOM scans            |
+| `scan_public_repo`                                                          | Scan any public GitHub repository without connecting it first    |
 | `list_findings`, `get_finding`, `set_finding_status`, `list_finding_events` | Read and triage findings; audit trail                            |
 | `list_fixes`, `run_fix`, `get_fix`, `get_fix_progress`, `get_fix_diff`      | Start an AI autofix and inspect the resulting diff               |
 | `refine_fix`, `cancel_fix`, `create_pull_request`                           | Iterate on a fix, stop it, or open a PR on the source repository |
@@ -198,11 +204,18 @@ asynchronous: `start_scan`, `run_fix`, `refine_fix` and the `*_progress` tools t
 `wait_seconds` (max 120) to block briefly and return the latest progress; agents should poll the
 progress tools until the status is terminal rather than assume completion.
 
+`scan_public_repo` takes a public GitHub repository (`owner/repo` or a github.com URL), an optional
+`scan_type` (default `deep_ai_scan`) and `branch`. It returns the `repository_id` and `scan_id` to
+poll with `get_scan_progress` / `get_scan_results`, and a link to the results in the web app. Scans
+use the separate public-repository allowance (`public_sast_scans` / `public_deep_ai_scans` in
+`get_quota`).
+
 `set_finding_status` takes an optional `reason`. An organization can require one to close a finding
 (`resolved`, `ignored` or `false_positive`); the tool then returns an error asking for it.
 
 Read-only tools are annotated `readOnlyHint` so clients can auto-approve them; `create_pull_request`
-is flagged as an open-world action because it publishes to your source repository.
+is flagged as an open-world action because it publishes to your source repository, and
+`scan_public_repo` because it reaches a third-party repository.
 
 ### Using the tools as a library
 
