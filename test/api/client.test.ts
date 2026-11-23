@@ -27,6 +27,31 @@ function makeClient(): ApiClient {
 }
 
 describe("ApiClient", () => {
+  it("sends client-wide headers on every request, below per-request ones and auth", async () => {
+    const seen: Array<Record<string, string>> = [];
+    mockAgent
+      .get(BASE)
+      .intercept({ path: /\/api\/v1\/.*/, method: "GET" })
+      .reply((req) => {
+        seen.push(req.headers as Record<string, string>);
+        return { statusCode: 200, data: "{}" };
+      })
+      .times(2);
+
+    const client = new ApiClient({
+      baseUrl: BASE,
+      token: "kcp_live_test_token",
+      userAgent: buildUserAgent("0.1.0"),
+      headers: { "x-extra": "client", "x-override": "client", authorization: "Bearer other" },
+    });
+    await client.get("/api/v1/me");
+    await client.get("/api/v1/me", { headers: { "x-override": "request" } });
+
+    expect(seen[0]?.["x-extra"]).toBe("client");
+    expect(seen[0]?.["authorization"]).toBe("Bearer kcp_live_test_token");
+    expect(seen[1]?.["x-override"]).toBe("request");
+  });
+
   it("injects Authorization and User-Agent headers on GET", async () => {
     mockAgent
       .get(BASE)

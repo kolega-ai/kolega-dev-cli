@@ -7,6 +7,8 @@ export interface ApiClientOptions {
   token: string;
   userAgent: string;
   timeoutMs?: number;
+  /** Sent on every request; per-request headers override them. */
+  headers?: Record<string, string>;
 }
 
 export interface RequestOptions {
@@ -47,12 +49,14 @@ export class ApiClient {
   private readonly token: string;
   private readonly userAgent: string;
   private readonly timeoutMs: number;
+  private readonly defaultHeaders: Record<string, string>;
 
   constructor(opts: ApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
     this.token = opts.token;
     this.userAgent = opts.userAgent;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.defaultHeaders = { ...(opts.headers ?? {}) };
   }
 
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -80,6 +84,7 @@ export class ApiClient {
     const headers: Record<string, string> = {
       accept: "application/json",
       "user-agent": this.userAgent,
+      ...this.defaultHeaders,
       ...(options.headers ?? {}),
     };
     if (!options.skipAuth) {
