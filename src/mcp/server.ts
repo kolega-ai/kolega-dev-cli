@@ -146,20 +146,57 @@ interface FindingLike {
   status?: string;
   title?: string | null;
   message: string;
+  category?: string | null;
   file_path: string;
   line_start?: number | null;
+  manifest_paths?: string[];
   check_id: string;
 }
+
+const truncate = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 const compactFinding = (f: FindingLike) => ({
   id: f.id,
   severity: f.severity,
   status: f.status,
-  title: f.title || (f.message.length > 120 ? `${f.message.slice(0, 119)}…` : f.message),
+  title: f.title || truncate(f.message, 120),
   file_path: f.file_path,
   line_start: f.line_start ?? null,
   check_id: f.check_id,
+  // SBOM findings: file_path is the package URL; these say where it's declared.
+  ...(f.manifest_paths?.length ? { manifest_paths: f.manifest_paths } : {}),
+  ...(f.category === "license" ? { category: f.category } : {}),
 });
+
+interface FindingEventLike {
+  id: string;
+  event_type: string;
+  finding_id: string;
+  severity?: string | null;
+  previous_status?: string | null;
+  new_status?: string | null;
+  actor_user_id?: string | null;
+  metadata?: Record<string, unknown>;
+  event_timestamp: string;
+}
+
+const compactEvent = (e: FindingEventLike) => {
+  const reason =
+    typeof e.metadata?.reason === "string" ? truncate(e.metadata.reason, 200) : undefined;
+  const changedBy = typeof e.metadata?.changed_by === "string" ? e.metadata.changed_by : undefined;
+  return {
+    id: e.id,
+    event_type: e.event_type,
+    finding_id: e.finding_id,
+    severity: e.severity ?? null,
+    previous_status: e.previous_status ?? null,
+    new_status: e.new_status ?? null,
+    actor: changedBy ?? e.actor_user_id ?? null,
+    ...(reason ? { reason } : {}),
+    event_timestamp: e.event_timestamp,
+  };
+};
 
 const scanTypeSchema = z
   .enum(SCAN_TYPES as [ScanType, ...ScanType[]])
@@ -438,18 +475,35 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         status: findingStatusSchema.optional(),
         scan_batch_id: z.string().optional().describe("Only findings from this scan batch."),
         scan_type: scanTypeSchema.optional(),
+        category: z
+          .string()
+          .optional()
+          .describe(
+            "dependency or license (SBOM vulnerability or license-policy findings), secrets, or security.",
+          ),
         detail: detailSchema,
         ...pagination(50),
       },
       annotations: READ_ONLY,
     },
-    ({ repository_id, severity, status, scan_batch_id, scan_type, detail, limit, skip }) =>
+    ({
+      repository_id,
+      severity,
+      status,
+      scan_batch_id,
+      scan_type,
+      category,
+      detail,
+      limit,
+      skip,
+    }) =>
       run(async () => {
         const page = await listFindings(client, await resolveRepo(repository_id), {
           severity,
           status,
           scanBatchId: scan_batch_id,
           scanType: scan_type,
+          category,
           limit,
           skip,
         });
@@ -515,13 +569,30 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         scan_type: scanTypeSchema.optional(),
         since: z.string().optional().describe("ISO 8601 lower bound."),
         until: z.string().optional().describe("ISO 8601 upper bound."),
+        detail: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return full event objects. By default each event is compact: id, event_type, finding_id, severity, previous_status, new_status, actor, reason, event_timestamp.",
+          ),
         ...pagination(100),
       },
       annotations: READ_ONLY,
     },
-    ({ repository_id, finding_id, event_type, severity, scan_type, since, until, limit, skip }) =>
-      run(async () =>
-        listFindingEvents(client, {
+    ({
+      repository_id,
+      finding_id,
+      event_type,
+      severity,
+      scan_type,
+      since,
+      until,
+      detail,
+      limit,
+      skip,
+    }) =>
+      run(async () => {
+        const page = await listFindingEvents(client, {
           repositoryId: repository_id ? await resolveRepo(repository_id) : undefined,
           findingId: finding_id,
           eventType: event_type,
@@ -531,8 +602,9 @@ export function createMcpServer(options: McpServerOptions): McpServer {
           end: until,
           limit,
           skip,
-        }),
-      ),
+        });
+        return detail ? page : { ...page, items: page.items.map(compactEvent) };
+      }),
   );
 
   // ---- fixes ------------------------------------------------------------

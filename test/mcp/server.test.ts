@@ -532,6 +532,85 @@ describe("createMcpServer", () => {
     });
   });
 
+  it("list_finding_events returns compact events unless detail is set", async () => {
+    const event = {
+      id: "e-1",
+      organization_id: "org-1",
+      repository_id: "repo-1",
+      finding_id: "f-1",
+      scan_id: "s-1",
+      scan_type: "deep_ai_scan",
+      event_type: "status_changed",
+      previous_status: "open",
+      new_status: "false_positive",
+      severity: "critical",
+      check_id: "auth.bypass",
+      file_path: "src/auth.py",
+      actor_user_id: "system",
+      metadata: { changed_by: "ai_assessment", reason: "r".repeat(500) },
+      event_timestamp: "2026-11-23T13:26:26Z",
+      created_at: "2026-11-23T13:26:26Z",
+    };
+    const { client } = stubClient({
+      "GET /api/v1/finding-events": () => ({
+        items: [event],
+        total: 1,
+        limit: 100,
+        skip: 0,
+        has_next: false,
+      }),
+    });
+    const { mcp } = await connect(client);
+
+    const compact = JSON.parse(
+      text(await mcp.callTool({ name: "list_finding_events", arguments: {} })),
+    );
+    expect(compact.items[0]).toEqual({
+      id: "e-1",
+      event_type: "status_changed",
+      finding_id: "f-1",
+      severity: "critical",
+      previous_status: "open",
+      new_status: "false_positive",
+      actor: "ai_assessment",
+      reason: `${"r".repeat(199)}…`,
+      event_timestamp: "2026-11-23T13:26:26Z",
+    });
+
+    const full = JSON.parse(
+      text(await mcp.callTool({ name: "list_finding_events", arguments: { detail: true } })),
+    );
+    expect(full.items[0].metadata.reason).toHaveLength(500);
+  });
+
+  it("list_findings filters by category and shows where SBOM packages are declared", async () => {
+    const sbomFinding = {
+      id: "f-2",
+      check_id: "sbom.vuln.GHSA-2g6r-c272-w58r",
+      title: null,
+      category: "dependency",
+      file_path: "pkg:pypi/langchain-core@1.0.2",
+      manifest_paths: ["services/chatbot/requirements.txt"],
+      severity: "low",
+      status: "open",
+      message: "langchain-core 1.0.2 has a low-severity advisory",
+    };
+    const { client, calls } = stubClient({
+      "GET /api/v1/repositories/repo-1/findings": () => ({ items: [sbomFinding], total: 1 }),
+    });
+    const { mcp } = await connect(client);
+    const page = JSON.parse(
+      text(
+        await mcp.callTool({
+          name: "list_findings",
+          arguments: { repository_id: "repo-1", category: "dependency" },
+        }),
+      ),
+    );
+    expect(calls.at(-1)?.query).toMatchObject({ category: "dependency" });
+    expect(page.items[0].manifest_paths).toEqual(["services/chatbot/requirements.txt"]);
+  });
+
   it("caps wait_seconds at MAX_WAIT_SECONDS via schema validation", async () => {
     const { client, calls } = stubClient({});
     const { mcp } = await connect(client);

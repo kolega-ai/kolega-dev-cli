@@ -208,8 +208,9 @@ latest progress; agents should poll the progress tools until the status is termi
 assume completion.
 
 `get_scan_results` and `list_findings` return compact findings (id, severity, status, title, file,
-line, check) to keep responses small; pass `detail: true` for full finding objects, or use
-`get_finding` for one. Each finding has a status (`false_positive`, `ignored` and `resolved` are
+line, check; SBOM findings add the manifest paths) and `list_finding_events` returns compact events,
+to keep responses small; pass `detail: true` for full objects, or use `get_finding` for one finding.
+`list_findings` also filters by `category` (e.g. `license` or `dependency` for SBOM findings). Each finding has a status (`false_positive`, `ignored` and `resolved` are
 dismissed), and scan results include per-status and per-severity totals plus
 `assessment_complete`, which stays false until AI assessment has finished.
 
