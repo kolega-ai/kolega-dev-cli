@@ -98,10 +98,30 @@ const repositoryIdSchema = z
     'Kolega repository id. Pass "default" to auto-resolve when the organization has exactly one repository.',
   );
 
-const paginationSchema = {
-  limit: z.number().int().min(1).max(200).optional().describe("Page size (default 50)."),
+const pagination = (defaultLimit: number) => ({
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe(`Page size (default ${defaultLimit}).`),
   skip: z.number().int().min(0).optional().describe("Number of items to skip."),
-};
+});
+
+const SCAN_ID_DESCRIPTION =
+  "Scan batch id: scan_id from start_scan or scan_public_repo (batch_id in list_scans).";
+
+const scanNextStep = (repositoryId: string, scanId: string): string =>
+  `Poll get_scan_progress with repository_id "${repositoryId}" and scan_id "${scanId}" until the batch status is completed, partial_failure or failed, then call get_scan_results.`;
+
+const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
+const severitySchema = z
+  .preprocess(
+    (value) => (typeof value === "string" ? value.toLowerCase() : value),
+    z.enum(SEVERITIES),
+  )
+  .describe("critical | high | medium | low | info");
 
 const waitSecondsSchema = z
   .number()
@@ -144,7 +164,7 @@ const compactFinding = (f: FindingLike) => ({
 const scanTypeSchema = z
   .enum(SCAN_TYPES as [ScanType, ...ScanType[]])
   .describe(
-    "secrets_scan (leaked credentials), semgrep_scan (SAST), deep_ai_scan (semantic AI analysis, consumes a deep-scan credit), sbom_scan (dependency inventory).",
+    "secrets_scan (leaked credentials) and semgrep_scan (SAST) use the SAST scan allowance; deep_ai_scan (semantic AI analysis) uses a deep-scan credit; sbom_scan (dependency inventory) is not metered. Scans of public repositories added with scan_public_repo use the separate public allowances.",
   );
 
 const findingStatusSchema = z.enum(FINDING_STATUSES as [FindingStatus, ...FindingStatus[]]);
@@ -176,7 +196,19 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     }
   };
 
-  const resolveRepo = (id: string): Promise<string> => resolveRepositoryId(client, id);
+  const resolveRepo = async (id: string): Promise<string> => {
+    try {
+      return await resolveRepositoryId(client, id);
+    } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "MULTIPLE_REPOSITORIES") {
+        throw new ApiError(
+          'This organization has several repositories, so "default" is ambiguous. Call list_repositories and pass a repository_id.',
+          { status: err.status, errorCode: err.errorCode },
+        );
+      }
+      throw err;
+    }
+  };
 
   // ---- identity & quota -------------------------------------------------
 
@@ -197,7 +229,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get quota balance",
       description:
-        "Current-period quota: remaining pull requests, SAST scans, deep AI scans, scans of public repositories (a separate allowance) and repository slots. Check this before starting deep AI scans or fixes.",
+        "Current-period quota: remaining pull requests, SAST scans, deep AI scans, scans of public repositories (a separate allowance) and repository slots. repositories.current counts the organization's own repositories only, not public ones added with scan_public_repo. Check this before starting deep AI scans or opening pull requests.",
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -214,7 +246,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         "List the repositories registered with Kolega DevSec for this organization. Each has an id used by the other tools and the attached source repos (owner/name on GitHub, GitLab or Azure DevOps).",
       inputSchema: {
         include_archived: z.boolean().optional().describe("Include archived repositories."),
-        ...paginationSchema,
+        ...pagination(50),
       },
       annotations: READ_ONLY,
     },
@@ -245,7 +277,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         repository_id: repositoryIdSchema,
         scan_type: scanTypeSchema.optional(),
         status: z.string().optional().describe("Filter by batch status, e.g. running, completed."),
-        ...paginationSchema,
+        ...pagination(20),
       },
       annotations: READ_ONLY,
     },
@@ -265,7 +297,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Start scan",
       description:
-        "Start a security scan on a repository. Returns the scan batch (use batch_id with get_scan_progress / get_scan_results). deep_ai_scan consumes a deep-scan credit and can take many minutes; the others usually finish within a couple of minutes.",
+        "Start a security scan on a repository. Returns the scan batch with scan_id (the same value as batch_id) to use with get_scan_progress and get_scan_results, a link to the results in the web app, and the next step. deep_ai_scan uses a deep-scan credit and can take many minutes; the others usually finish within a couple of minutes.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         scan_type: scanTypeSchema,
@@ -277,9 +309,14 @@ export function createMcpServer(options: McpServerOptions): McpServer {
       run(async () => {
         const repo = await resolveRepo(repository_id);
         const batch = await startScan(client, repo, { scan_type });
-        if (!wait_seconds) return batch;
+        const started = {
+          ...batch,
+          scan_id: batch.batch_id,
+          next_step: scanNextStep(repo, batch.batch_id),
+        };
+        if (!wait_seconds) return started;
         const progress = await waitForScan(repo, batch.batch_id, wait_seconds);
-        return { batch, progress };
+        return { batch: started, progress };
       }),
   );
 
@@ -336,7 +373,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         scan_type: batch.scan_type,
         status: batch.status,
         app_url: added.app_url,
-        next_step: `Poll get_scan_progress with repository_id "${added.id}" and scan_id "${batch.batch_id}" until the status is terminal, then call get_scan_results (or list_findings for full detail).`,
+        next_step: scanNextStep(added.id, batch.batch_id),
       };
       if (!wait_seconds) return ok(result);
       return run(async () => ({
@@ -354,7 +391,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         "Progress and status of a scan batch. Poll this until the batch status is completed, partial_failure or failed, then call get_scan_results. Go by the batch's own status: its repositories reach succeeded first, while AI assessment is still triaging the findings, and their findings_count is raw detections before de-duplication and triage, so it can differ from the results.",
       inputSchema: {
         repository_id: repositoryIdSchema,
-        scan_id: z.string().min(1).describe("Scan batch id (batch_id from start_scan/list_scans)."),
+        scan_id: z.string().min(1).describe(SCAN_ID_DESCRIPTION),
         wait_seconds: waitSecondsSchema,
       },
       annotations: READ_ONLY,
@@ -375,7 +412,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         "Findings for a scan batch, each with its status: open and needs_manual_review need attention; false_positive, ignored and resolved do not (AI assessment marks false positives). Report open findings separately from dismissed ones. status_counts, severity_counts and actionable_severity_counts (open or needs_manual_review only) give the totals. If assessment_complete is false the scan is still running or being assessed, so more findings may appear and statuses may change: wait with get_scan_progress first. Use a finding's id with get_finding or run_fix.",
       inputSchema: {
         repository_id: repositoryIdSchema,
-        scan_id: z.string().min(1).describe("Scan batch id."),
+        scan_id: z.string().min(1).describe(SCAN_ID_DESCRIPTION),
         detail: detailSchema,
       },
       annotations: READ_ONLY,
@@ -397,12 +434,12 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         "List security findings for a repository. Filter by severity (critical, high, medium, low, info), status (open and needs_manual_review need attention), scan batch or scan type. Use get_finding for one finding in full.",
       inputSchema: {
         repository_id: repositoryIdSchema,
-        severity: z.string().optional().describe("critical | high | medium | low | info"),
+        severity: severitySchema.optional(),
         status: findingStatusSchema.optional(),
         scan_batch_id: z.string().optional().describe("Only findings from this scan batch."),
         scan_type: scanTypeSchema.optional(),
         detail: detailSchema,
-        ...paginationSchema,
+        ...pagination(50),
       },
       annotations: READ_ONLY,
     },
@@ -425,7 +462,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get finding",
       description:
-        "Full detail for one finding: status, file and lines, description, CWE/OWASP, references and CVSS.",
+        "Full detail for one finding: status, file and lines, description, CWE/OWASP, references, CVSS, and the AI assessment (including why it was dismissed, if it was).",
       inputSchema: {
         repository_id: repositoryIdSchema,
         finding_id: z.string().min(1),
@@ -469,16 +506,16 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "List finding events",
       description:
-        "Audit trail of finding lifecycle events across the organization (newest first): created, status changes, fixes, etc. Optionally scope to a repository, finding, event type or time window.",
+        "Audit trail of finding lifecycle events across the organization (newest first): detected, status changes (including AI triage dismissals), fixes, etc. Optionally scope to a repository, finding, event type or time window. An event's scan_id is the individual repository scan, not the scan batch id the other tools use.",
       inputSchema: {
         repository_id: repositoryIdSchema.optional(),
         finding_id: z.string().optional(),
         event_type: z.string().optional(),
-        severity: z.string().optional(),
+        severity: severitySchema.optional(),
         scan_type: scanTypeSchema.optional(),
         since: z.string().optional().describe("ISO 8601 lower bound."),
         until: z.string().optional().describe("ISO 8601 upper bound."),
-        ...paginationSchema,
+        ...pagination(100),
       },
       annotations: READ_ONLY,
     },
@@ -508,7 +545,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
       inputSchema: {
         repository_id: repositoryIdSchema,
         finding_id: z.string().optional(),
-        ...paginationSchema,
+        ...pagination(50),
       },
       annotations: READ_ONLY,
     },
@@ -523,7 +560,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Run AI fix",
       description:
-        "Start an AI autofix for one or more findings. The agent clones the source repo, patches the code, and runs tests. Consumes a PR credit. Returns the fix (poll get_fix_progress, then get_fix_diff; open a PR with create_pull_request). source_repo is auto-resolved when the repository has exactly one attached source repo.",
+        "Start an AI autofix for one or more findings. The agent clones the source repo, patches the code, and runs tests. Doesn't use a quota credit. Returns the fix (poll get_fix_progress, then get_fix_diff; open a PR with create_pull_request, which uses a pull-request credit). source_repo is auto-resolved when the repository has exactly one attached source repo.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         finding_ids: z.array(z.string().min(1)).min(1).describe("Findings to fix together."),
@@ -630,7 +667,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Refine fix",
       description:
-        "Re-run the fix agent on an existing fix with follow-up instructions (e.g. after reviewing the diff). Consumes a PR credit.",
+        "Re-run the fix agent on an existing fix with follow-up instructions (e.g. after reviewing the diff). The new diff replaces the old one on the same fix id; earlier diffs aren't kept. Doesn't use a quota credit.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         fix_id: z.string().min(1),
@@ -666,7 +703,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Create pull request",
       description:
-        "Open a pull request on the source repo from a completed fix. Title, body and branch name are auto-generated when omitted. This is visible to everyone with access to the source repo.",
+        "Open a pull request on the source repo from a completed fix. Title, body and branch name are auto-generated when omitted. Uses one pull-request credit. This is visible to everyone with access to the source repo. Not available for public repositories added with scan_public_repo, which are read-only: share the diff from get_fix_diff instead.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         fix_id: z.string().min(1),
