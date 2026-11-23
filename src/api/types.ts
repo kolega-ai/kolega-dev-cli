@@ -43,8 +43,10 @@ export type ScanFindingSummary = Schemas["PublicScanFindingSummary"] & {
   id?: string;
   title?: string | null;
   status?: string;
+  category?: string | null;
   line_start?: number | null;
   line_end?: number | null;
+  manifest_paths?: string[];
 };
 export type ScanResults = Omit<Schemas["PublicScanResultsResponse"], "findings"> & {
   assessment_complete?: boolean;
@@ -59,6 +61,7 @@ export type ScanType = Schemas["ScanType"];
 export type Finding = Schemas["PublicFindingResponse"] & {
   line_start?: number | null;
   line_end?: number | null;
+  manifest_paths?: string[];
 };
 export type FindingListResponse = Schemas["PublicPaginatedResponse_PublicFindingResponse_"];
 export type FindingStatusUpdateRequest = Schemas["PublicFindingStatusUpdateRequest"];

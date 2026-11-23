@@ -12,6 +12,7 @@ export async function listFindings(
     status?: string;
     scanBatchId?: string;
     scanType?: string;
+    category?: string;
     limit?: number;
     skip?: number;
   } = {},
@@ -22,6 +23,7 @@ export async function listFindings(
       status: opts.status,
       scan_batch_id: opts.scanBatchId,
       scan_type: opts.scanType,
+      category: opts.category,
       limit: opts.limit,
       skip: opts.skip,
     },
