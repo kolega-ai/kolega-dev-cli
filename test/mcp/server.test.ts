@@ -225,7 +225,12 @@ describe("createMcpServer", () => {
       name: "start_scan",
       arguments: { repository_id: "repo-1", scan_type: "semgrep_scan" },
     });
-    expect(JSON.parse(text(result))).toEqual({ batch_id: "b-1", status: "queued" });
+    expect(JSON.parse(text(result))).toMatchObject({
+      batch_id: "b-1",
+      scan_id: "b-1",
+      status: "queued",
+    });
+    expect(JSON.parse(text(result)).next_step).toContain('scan_id "b-1"');
     expect(calls[0]?.body).toEqual({ scan_type: "semgrep_scan" });
     expect(calls).toHaveLength(1);
   });
@@ -393,6 +398,55 @@ describe("createMcpServer", () => {
     } finally {
       Date.now = realNow;
     }
+  });
+
+  it("list_findings accepts severity in any case and rejects unknown values", async () => {
+    const { client, calls } = stubClient({
+      "GET /api/v1/repositories/repo-1/findings": () => ({ items: [], total: 0 }),
+    });
+    const { mcp } = await connect(client);
+    const upper = await mcp.callTool({
+      name: "list_findings",
+      arguments: { repository_id: "repo-1", severity: "CRITICAL" },
+    });
+    expect(upper.isError).toBeFalsy();
+    expect(calls[0]?.query).toMatchObject({ severity: "critical" });
+
+    const bogus = await mcp.callTool({
+      name: "list_findings",
+      arguments: { repository_id: "repo-1", severity: "bogus" },
+    });
+    expect(bogus.isError).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("documents each list tool's real default page size", async () => {
+    const { client } = stubClient({});
+    const { mcp } = await connect(client);
+    const { tools } = await mcp.listTools();
+    const limitDescription = (name: string) =>
+      (
+        tools.find((t) => t.name === name)?.inputSchema.properties?.limit as {
+          description?: string;
+        }
+      )?.description;
+    expect(limitDescription("list_scans")).toContain("default 20");
+    expect(limitDescription("list_finding_events")).toContain("default 100");
+    expect(limitDescription("list_findings")).toContain("default 50");
+  });
+
+  it("points agents at list_repositories when default is ambiguous", async () => {
+    const { client } = stubClient({
+      "GET /api/v1/repositories": () => ({ items: [REPO, { ...REPO, id: "repo-2" }], total: 2 }),
+    });
+    const { mcp } = await connect(client);
+    const result = await mcp.callTool({
+      name: "list_findings",
+      arguments: { repository_id: "default" },
+    });
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain("list_repositories");
+    expect(text(result)).not.toContain("kolega repos list");
   });
 
   it("keeps waits under common MCP client request timeouts", () => {
