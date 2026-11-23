@@ -110,25 +110,41 @@ export function renderScanBatch(batch: ScanBatch): void {
 }
 
 export function renderScanResults(results: ScanResults): void {
+  const breakdown = Object.entries(results.status_counts ?? {})
+    .map(([status, count]) => `${count} ${status}`)
+    .join(", ");
   printKv([
     ["Batch ID", results.batch_id],
     ["Scan type", results.scan_type],
     ["Status", results.status],
-    ["Findings", results.findings_count],
+    ["Findings", breakdown ? `${results.findings_count} (${breakdown})` : results.findings_count],
   ]);
+  if (results.assessment_complete === false) {
+    process.stdout.write(
+      chalk.yellow(
+        "\nThe scan is still running or being assessed: findings and their statuses aren't final.\n",
+      ),
+    );
+  }
   if (results.findings.length === 0) {
     process.stdout.write(chalk.dim("\nNo findings.\n"));
     return;
   }
   process.stdout.write("\n");
   const table = new Table({
-    head: ["Severity", "Check", "File", "Message"],
-    colWidths: [12, 24, 32, 60],
+    head: ["Severity", "Status", "Check", "File", "Message"],
+    colWidths: [12, 16, 24, 32, 48],
     wordWrap: true,
     style: { head: ["cyan"] },
   });
   for (const f of results.findings) {
-    table.push([colorSeverity(f.severity), f.check_id, f.file_path, f.message]);
+    table.push([
+      colorSeverity(f.severity),
+      f.status ? colorStatus(f.status) : chalk.dim("—"),
+      f.check_id,
+      f.file_path,
+      f.message,
+    ]);
   }
   process.stdout.write(table.toString() + "\n");
 }

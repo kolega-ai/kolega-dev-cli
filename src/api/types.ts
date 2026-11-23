@@ -38,8 +38,17 @@ export type ScanBatch = Schemas["PublicScanBatchResponse"];
 export type ScanBatchListResponse = Schemas["PublicPaginatedResponse_PublicScanBatchResponse_"];
 export type ScanProgress = Schemas["PublicScanProgressResponse"];
 export type ScanProgressRepository = Schemas["PublicScanProgressRepository"];
-export type ScanResults = Schemas["PublicScanResultsResponse"];
-export type ScanFindingSummary = Schemas["PublicScanFindingSummary"];
+// Status fields typed locally so this builds against API specs that predate them.
+export type ScanFindingSummary = Schemas["PublicScanFindingSummary"] & {
+  id?: string;
+  title?: string | null;
+  status?: string;
+};
+export type ScanResults = Omit<Schemas["PublicScanResultsResponse"], "findings"> & {
+  assessment_complete?: boolean;
+  status_counts?: Record<string, number>;
+  findings: ScanFindingSummary[];
+};
 export type ScanCreateRequest = Schemas["PublicScanCreateRequest"];
 export type ScanType = Schemas["ScanType"];
 

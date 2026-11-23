@@ -108,6 +108,8 @@ kolega scans results <repo-id> <scan-id>
 - **`--wait`** blocks after starting the scan, streaming a live progress bar until it completes. Ctrl+C detaches cleanly (the scan keeps running server-side).
 - **`--watch`** on `progress` polls every 5 s and redraws in-place on TTYs.
 - A **quota pre-check** runs before starting — skip with `--no-quota-check`.
+- **`results`** shows each finding's status (AI assessment marks false positives) with a count per
+  status, and warns while the scan is still being assessed, when statuses aren't final yet.
 - **`scans public`** scans any public GitHub repository without connecting it first. It adds the
   repository to your organization (reusing it if already added), starts a scan (`deep-ai` by
   default) and prints a link to the results. Public repositories have their own monthly scan

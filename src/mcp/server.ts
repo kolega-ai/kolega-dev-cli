@@ -322,9 +322,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get scan progress",
       description:
-        "Progress and status of a scan batch. Terminal statuses: " +
-        TERMINAL_SCAN_STATUSES.join(", ") +
-        ". Poll this until the status is terminal, then call get_scan_results.",
+        "Progress and status of a scan batch. Poll this until the batch status is completed, partial_failure or failed, then call get_scan_results. Go by the batch's own status: its repositories reach succeeded first, while AI assessment is still triaging the findings, and their findings_count is raw detections before triage.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         scan_id: z.string().min(1).describe("Scan batch id (batch_id from start_scan/list_scans)."),
@@ -345,7 +343,7 @@ export function createMcpServer(options: McpServerOptions): McpServer {
     {
       title: "Get scan results",
       description:
-        "Findings summary for a completed scan batch. For full finding detail use list_findings with scan_batch_id.",
+        "Findings for a scan batch, each with its status: open and needs_manual_review need attention; false_positive, ignored and resolved do not (AI assessment marks false positives). status_counts totals them; report open findings separately from dismissed ones. If assessment_complete is false the scan is still running or being assessed, so findings and statuses are not final: wait with get_scan_progress first. For full finding detail use list_findings with scan_batch_id.",
       inputSchema: {
         repository_id: repositoryIdSchema,
         scan_id: z.string().min(1).describe("Scan batch id."),

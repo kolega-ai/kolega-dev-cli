@@ -100,6 +100,10 @@ describe("createMcpServer", () => {
     expect(byName.scan_public_repo!.annotations?.openWorldHint).toBe(true);
     // Every tool must carry a description — that's what the agent reasons over.
     for (const tool of tools) expect(tool.description?.length ?? 0).toBeGreaterThan(20);
+    // Agents must not read dismissed findings as open ones, or results before triage finishes.
+    expect(byName.get_scan_results!.description).toContain("false_positive");
+    expect(byName.get_scan_results!.description).toContain("assessment_complete");
+    expect(byName.get_scan_progress!.description).not.toMatch(/terminal statuses:.*succeeded/i);
   });
 
   it("returns API JSON as text content", async () => {
