@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Get Public Api Me
-         * @description Return safe metadata for the authenticated API key connection.
+         * @description Return safe metadata for the authenticated API key (or OAuth) connection.
          */
         get: operations["get_public_api_me_api_v1_me_get"];
         put?: never;
@@ -38,6 +38,28 @@ export interface paths {
         get: operations["list_repositories_api_v1_repositories_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Public Repository
+         * @description Add any public GitHub repository so it can be scanned. Idempotent per repository.
+         *
+         *     Scans of it use the organization's normal scan quota.
+         */
+        post: operations["add_public_repository_api_v1_repositories_public_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -221,6 +243,9 @@ export interface paths {
         /**
          * Update Finding Status
          * @description Update the status of a finding (open / resolved / ignored / etc).
+         *
+         *     Organizations can require a ``reason`` to close a finding (resolved, ignored,
+         *     false_positive); without one the request fails with ``FINDING_CLOSURE_REASON_REQUIRED``.
          */
         patch: operations["update_finding_status_api_v1_repositories__repository_id__findings__finding_id__patch"];
         trace?: never;
@@ -625,11 +650,11 @@ export interface components {
             html_url?: string | null;
             /**
              * Provider
-             * @description Git provider (github, gitlab, or azure_devops)
+             * @description Git provider (github, gitlab, azure_devops, or codecommit)
              * @default github
              * @enum {string}
              */
-            provider: "github" | "gitlab" | "azure_devops";
+            provider: "github" | "gitlab" | "azure_devops" | "codecommit";
             /**
              * Provider Repository Id
              * @description Provider-native repository identifier (e.g. GitHub repository id, GitLab project id)
@@ -716,6 +741,12 @@ export interface components {
              * @default false
              */
             archived: boolean;
+            /**
+             * Is Public Repo Scan
+             * @description A public repository added for scanning rather than the org's own code; not counted in its limit
+             * @default false
+             */
+            is_public_repo_scan: boolean;
             /**
              * Repository Count
              * @description Number of repositories in the application
@@ -1005,12 +1036,13 @@ export interface components {
         /** BundleTopupResponse */
         BundleTopupResponse: {
             /** Payment Url */
-            payment_url: string;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
+            payment_url?: string | null;
+            /** Checkout */
+            checkout?: {
+                [key: string]: unknown;
+            } | null;
+            /** Expires At */
+            expires_at?: string | null;
             /** Amount */
             amount: string;
             /** Bundle Contents */
@@ -1103,6 +1135,123 @@ export interface components {
             added_holidays?: string[];
             /** Removed Holidays */
             removed_holidays?: string[];
+        };
+        /** CodeCommitBranchItem */
+        CodeCommitBranchItem: {
+            /** Name */
+            name: string;
+            /** Commit Sha */
+            commit_sha: string;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** CodeCommitConnectRequest */
+        CodeCommitConnectRequest: {
+            /**
+             * Aws Region
+             * @description AWS region the repositories live in (e.g. eu-west-2)
+             */
+            aws_region: string;
+            /**
+             * Auth Mode
+             * @description Credential type
+             * @enum {string}
+             */
+            auth_mode: "access_keys" | "iam_role";
+            /**
+             * Access Key Id
+             * @description IAM access key ID (access_keys mode)
+             */
+            access_key_id?: string | null;
+            /**
+             * Secret Access Key
+             * @description IAM secret access key (access_keys mode)
+             */
+            secret_access_key?: string | null;
+            /**
+             * Role Arn
+             * @description IAM role ARN to assume (iam_role mode)
+             */
+            role_arn?: string | null;
+            /**
+             * External Id
+             * @description External ID shown by /role-setup (informational)
+             */
+            external_id?: string | null;
+            /**
+             * Label
+             * @description Optional nickname for this connection
+             */
+            label?: string | null;
+        };
+        /** CodeCommitConnectResponse */
+        CodeCommitConnectResponse: {
+            /** Connected */
+            connected: boolean;
+            connection: components["schemas"]["CodeCommitConnectionItem"];
+        };
+        /** CodeCommitConnectionItem */
+        CodeCommitConnectionItem: {
+            /** Id */
+            id: string;
+            /** Aws Account Id */
+            aws_account_id: string;
+            /** Aws Region */
+            aws_region: string;
+            /** Auth Mode */
+            auth_mode: string;
+            /** Label */
+            label?: string | null;
+            /** Caller Arn */
+            caller_arn?: string | null;
+            /**
+             * Credentials Invalid
+             * @default false
+             */
+            credentials_invalid: boolean;
+            /** Connected At */
+            connected_at?: string | null;
+            /** Connected By */
+            connected_by?: string | null;
+        };
+        /** CodeCommitRepoItem */
+        CodeCommitRepoItem: {
+            /**
+             * Provider
+             * @default codecommit
+             * @constant
+             */
+            provider: "codecommit";
+            /** Provider Repository Id */
+            provider_repository_id?: string | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Private
+             * @default true
+             */
+            private: boolean;
+            /** Default Branch */
+            default_branch: string;
+            /** Html Url */
+            html_url?: string | null;
+        };
+        /** CodeCommitRoleSetupResponse */
+        CodeCommitRoleSetupResponse: {
+            /** Kolega Principal Arn */
+            kolega_principal_arn: string;
+            /** External Id */
+            external_id: string;
+        };
+        /** CodeCommitStatusResponse */
+        CodeCommitStatusResponse: {
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Connections */
+            connections?: components["schemas"]["CodeCommitConnectionItem"][];
         };
         /** CommitFilesRequest */
         CommitFilesRequest: {
@@ -1611,6 +1760,16 @@ export interface components {
              * @description Path to the file containing the finding
              */
             file_path: string;
+            /**
+             * Manifest Paths
+             * @description Manifest or lockfile paths the package was found in (SBOM findings)
+             */
+            manifest_paths?: string[];
+            /**
+             * Enclosing Symbol
+             * @description Enclosing function/class name used by v3 fingerprinting (empty when unknown)
+             */
+            enclosing_symbol?: string | null;
             /** @description Severity level */
             severity: components["schemas"]["FindingSeverity"];
             /** @description Severity assigned by the initial scan, before any reclassification */
@@ -1657,6 +1816,8 @@ export interface components {
             status: components["schemas"]["FindingStatus"];
             /** @description Source of dismissal if status is ignored/false_positive (ai or manual) */
             dismissed_by?: components["schemas"]["DismissedBy"] | null;
+            /** @description Reason the user gave for the current status, if any */
+            status_reason?: components["schemas"]["FindingStatusReason"] | null;
             /**
              * First Detected At
              * Format: date-time
@@ -1961,6 +2122,50 @@ export interface components {
          */
         FindingEventType: "detected" | "resolved_auto" | "resolved_manual" | "resolved_pr_merged" | "resolved_pr_linked" | "reopened" | "status_changed" | "fix_created" | "fix_started" | "fix_completed" | "fix_failed" | "fix_cancelled" | "fix_pr_created" | "fix_pr_updated";
         /**
+         * FindingEvidence
+         * @description One document per finding; the latest scan that detected it wins.
+         */
+        FindingEvidence: {
+            /**
+             * Finding Id
+             * @description Finding this evidence belongs to
+             */
+            finding_id: string;
+            /**
+             * Organization Id
+             * @description Organization for access control and deletion
+             */
+            organization_id: string;
+            /**
+             * Application Id
+             * @description Application, so evidence is removed with it
+             */
+            application_id: string;
+            /**
+             * Scan Id
+             * @description Scan the evidence was captured in
+             */
+            scan_id: string;
+            /**
+             * Commit Hash
+             * @description Commit the code was read at
+             */
+            commit_hash?: string | null;
+            snippet: components["schemas"]["FindingSnippet"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * FindingEvidenceResponse
+         * @description Response for a finding's evidence; ``evidence`` is null when none was captured.
+         */
+        FindingEvidenceResponse: {
+            evidence?: components["schemas"]["FindingEvidence"] | null;
+        };
+        /**
          * FindingFixSummary
          * @description Summary of fix status for a finding in list views.
          */
@@ -2088,6 +2293,48 @@ export interface components {
          */
         FindingSeverity: "critical" | "high" | "medium" | "low";
         /**
+         * FindingSnippet
+         * @description The file's own lines around a finding, as they were at the scanned commit.
+         */
+        FindingSnippet: {
+            /**
+             * File Path
+             * @description Path of the file the code comes from
+             */
+            file_path: string;
+            /**
+             * Line Start
+             * @description First line the finding cites (1-based)
+             */
+            line_start: number;
+            /**
+             * Line End
+             * @description Last line the finding cites
+             */
+            line_end: number;
+            /**
+             * Code
+             * @description The cited lines plus a few lines of context either side
+             */
+            code: string;
+            /**
+             * Code Start Line
+             * @description Line number of the first line in ``code``
+             */
+            code_start_line: number;
+            /**
+             * Verified
+             * @description True when the model's quoted code was found on the cited lines, False when it was found elsewhere or not at all, None when the model gave no quote to check
+             */
+            verified?: boolean | null;
+            /**
+             * Truncated
+             * @description True when the code was cut to fit the size limits
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /**
          * FindingStatsResponse
          * @description Response model for finding statistics.
          */
@@ -2110,11 +2357,39 @@ export interface components {
          */
         FindingStatus: "open" | "resolved" | "ignored" | "false_positive" | "needs_manual_review";
         /**
+         * FindingStatusReason
+         * @description Reason a user gave when they set a finding's current status.
+         */
+        FindingStatusReason: {
+            /**
+             * Reason
+             * @description Reason text supplied by the user
+             */
+            reason: string;
+            /** @description Status the reason was given for */
+            status: components["schemas"]["FindingStatus"];
+            /**
+             * Actor User Id
+             * @description User ID (or API key actor) that set the status
+             */
+            actor_user_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+        };
+        /**
          * FindingStatusUpdateRequest
          * @description Request model for updating finding status.
          */
         FindingStatusUpdateRequest: {
             status: components["schemas"]["FindingStatus"];
+            /**
+             * Reason
+             * @description Why the status is being set. Required to close a finding when the organization demands it.
+             */
+            reason?: string | null;
         };
         /**
          * FindingWithFixSummary
@@ -2177,6 +2452,16 @@ export interface components {
              * @description Path to the file containing the finding
              */
             file_path: string;
+            /**
+             * Manifest Paths
+             * @description Manifest or lockfile paths the package was found in (SBOM findings)
+             */
+            manifest_paths?: string[];
+            /**
+             * Enclosing Symbol
+             * @description Enclosing function/class name used by v3 fingerprinting (empty when unknown)
+             */
+            enclosing_symbol?: string | null;
             /** @description Severity level */
             severity: components["schemas"]["FindingSeverity"];
             /** @description Severity assigned by the initial scan, before any reclassification */
@@ -2223,6 +2508,8 @@ export interface components {
             status: components["schemas"]["FindingStatus"];
             /** @description Source of dismissal if status is ignored/false_positive (ai or manual) */
             dismissed_by?: components["schemas"]["DismissedBy"] | null;
+            /** @description Reason the user gave for the current status, if any */
+            status_reason?: components["schemas"]["FindingStatusReason"] | null;
             /**
              * First Detected At
              * Format: date-time
@@ -2465,6 +2752,36 @@ export interface components {
             total: number;
         };
         /**
+         * FixBoardLane
+         * @description One column of the Fixes board: its total plus the first page of fixes in it.
+         */
+        FixBoardLane: {
+            lane: components["schemas"]["FixLane"];
+            /**
+             * Count
+             * @description Total fixes in this lane
+             */
+            count: number;
+            /**
+             * Fixes
+             * @description Newest fixes in the lane
+             */
+            fixes?: components["schemas"]["FixResponse"][];
+        };
+        /**
+         * FixBoardResponse
+         * @description Response model for the repository Fixes board.
+         */
+        FixBoardResponse: {
+            /** Lanes */
+            lanes: components["schemas"]["FixBoardLane"][];
+            /**
+             * Total
+             * @description Total unarchived fixes across all lanes
+             */
+            total: number;
+        };
+        /**
          * FixCreate
          * @description Request model for creating a fix.
          */
@@ -2496,7 +2813,7 @@ export interface components {
             source_repo: string;
             /**
              * Source Repo Provider
-             * @description Provider of the repository (github/gitlab)
+             * @description Provider of the repository (github/gitlab/azure_devops/codecommit)
              * @default github
              */
             source_repo_provider: string;
@@ -2507,13 +2824,25 @@ export interface components {
             source_scan_branch?: string | null;
         };
         /**
+         * FixLane
+         * @description Stage of the fix pipeline a fix currently sits in (the Fixes board columns).
+         *
+         *     Derived from the fix status plus the state of its PRs rather than stored: lanes are
+         *     mutually exclusive and every unarchived fix falls into exactly one of them.
+         * @enum {string}
+         */
+        FixLane: "in_progress" | "ready" | "pr_open" | "completed" | "needs_attention";
+        /**
          * FixListResponse
          * @description Response model for listing fixes.
          */
         FixListResponse: {
             /** Fixes */
             fixes: components["schemas"]["FixResponse"][];
-            /** Total */
+            /**
+             * Total
+             * @description Total fixes matching the filters (not just this page)
+             */
             total: number;
             /**
              * Has More
@@ -2661,7 +2990,7 @@ export interface components {
             source_repo?: string | null;
             /**
              * Source Repo Provider
-             * @description Provider of the repository (github/gitlab)
+             * @description Provider of the repository (github/gitlab/azure_devops/codecommit)
              */
             source_repo_provider?: string | null;
             /**
@@ -2790,6 +3119,21 @@ export interface components {
              * @description Name of the target application
              */
             application_name?: string | null;
+            /**
+             * Changed File Count
+             * @description Number of files touched by the generated diff (None when there is no diff yet)
+             */
+            changed_file_count?: number | null;
+            /**
+             * Lines Added
+             * @description Lines added by the generated diff
+             */
+            lines_added?: number | null;
+            /**
+             * Lines Removed
+             * @description Lines removed by the generated diff
+             */
+            lines_removed?: number | null;
         };
         /**
          * FixStatus
@@ -3549,7 +3893,7 @@ export interface components {
         ModelPricingCreateRequest: {
             /**
              * Provider
-             * @description LLM provider (anthropic, openai, google)
+             * @description LLM provider (deepseek, anthropic, openai, google)
              */
             provider: string;
             /**
@@ -3847,6 +4191,106 @@ export interface components {
          */
         NotificationType: "general" | "system" | "payment" | "workspace" | "security" | "domain";
         /**
+         * OAuthClientRegistrationRequest
+         * @description RFC 7591 §2 client metadata (the subset we honour).
+         */
+        OAuthClientRegistrationRequest: {
+            /** Redirect Uris */
+            redirect_uris: string[];
+            /** Client Name */
+            client_name?: string | null;
+            /** Client Uri */
+            client_uri?: string | null;
+            /** Token Endpoint Auth Method */
+            token_endpoint_auth_method?: string | null;
+            /** Grant Types */
+            grant_types?: string[] | null;
+            /** Response Types */
+            response_types?: string[] | null;
+            /** Scope */
+            scope?: string | null;
+        };
+        /** OAuthConsentApproveRequest */
+        OAuthConsentApproveRequest: {
+            /**
+             * Organization Id
+             * @description Omit only when the consent view says will_create_organization
+             */
+            organization_id?: string | null;
+            /** Scopes */
+            scopes: components["schemas"]["OrganizationApiKeyScope"][];
+        };
+        /** OAuthConsentDecisionResponse */
+        OAuthConsentDecisionResponse: {
+            /** Redirect Url */
+            redirect_url: string;
+        };
+        /** OAuthConsentOrganization */
+        OAuthConsentOrganization: {
+            /** Organization Id */
+            organization_id: string;
+            /** Organization Name */
+            organization_name: string;
+            /** Role */
+            role: string;
+            /** Allowed Scopes */
+            allowed_scopes: components["schemas"]["OrganizationApiKeyScope"][];
+        };
+        /**
+         * OAuthConsentView
+         * @description What the consent page needs to render. Never includes codes or tokens.
+         */
+        OAuthConsentView: {
+            /** Request Id */
+            request_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Client Uri */
+            client_uri?: string | null;
+            /** Redirect Host */
+            redirect_host: string;
+            /** Requested Scopes */
+            requested_scopes: components["schemas"]["OrganizationApiKeyScope"][];
+            /** Organizations */
+            organizations: components["schemas"]["OAuthConsentOrganization"][];
+            /**
+             * Will Create Organization
+             * @description The user belongs to no organization yet; approving creates a free workspace for them
+             * @default false
+             */
+            will_create_organization: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * OAuthGrantView
+         * @description A connected app as shown in organization settings.
+         */
+        OAuthGrantView: {
+            /** Id */
+            id: string;
+            /** Client Id */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /** User Id */
+            user_id: string;
+            /** User Email */
+            user_email?: string | null;
+            /** Scopes */
+            scopes: components["schemas"]["OrganizationApiKeyScope"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+        };
+        /**
          * OperationsEvidence
          * @description Operations evidence (MTTR and platform health).
          */
@@ -3951,6 +4395,16 @@ export interface components {
              */
             quota_deep_scans_per_month?: number | null;
             /**
+             * Quota Public Sast Scans Per Month
+             * @description Public-repo SAST scans per month
+             */
+            quota_public_sast_scans_per_month?: number | null;
+            /**
+             * Quota Public Deep Scans Per Month
+             * @description Public-repo deep scans per month
+             */
+            quota_public_deep_scans_per_month?: number | null;
+            /**
              * Max Repo Lines
              * @description Max scannable lines
              */
@@ -3970,7 +4424,7 @@ export interface components {
          * OrgQuotaType
          * @enum {string}
          */
-        OrgQuotaType: "prs" | "sast_scans" | "deep_scans";
+        OrgQuotaType: "prs" | "sast_scans" | "deep_scans" | "public_sast_scans" | "public_deep_scans";
         /**
          * OrganizationApiKeyCreateRequest
          * @description Request body for creating a new API key.
@@ -4263,11 +4717,28 @@ export interface components {
              */
             trial_eligible: boolean;
             /**
+             * Trial Started At
+             * @description When the free trial began; falls back to created_at when unset
+             */
+            trial_started_at?: string | null;
+            /**
+             * Setup Pending
+             * @description Auto-created (e.g. at MCP sign-up); onboarding not done yet and the trial has not begun
+             * @default false
+             */
+            setup_pending: boolean;
+            /**
              * Is Demo
              * @description If True, this is a private per-user demo organization backed by demo fixture data
              * @default false
              */
             is_demo: boolean;
+            /**
+             * Require Finding Closure Reason
+             * @description If True, closing a finding without a fix (resolved / ignored / false_positive) requires a reason
+             * @default false
+             */
+            require_finding_closure_reason: boolean;
             /**
              * Member Count
              * @description Number of members in the organization
@@ -4289,6 +4760,11 @@ export interface components {
              * @description Organization display name
              */
             name?: string | null;
+            /**
+             * Require Finding Closure Reason
+             * @description Require a reason to close a finding without a fix. Owner only.
+             */
+            require_finding_closure_reason?: boolean | null;
         };
         /**
          * PaginationInfo
@@ -4494,6 +4970,32 @@ export interface components {
             branch_name?: string | null;
         };
         /**
+         * PublicFindingAssessment
+         * @description The AI assessment's verdict on a finding, including why it was dismissed.
+         */
+        PublicFindingAssessment: {
+            /**
+             * Status
+             * @description pending, in_progress, completed or failed.
+             */
+            status: string;
+            /** Is Real Concern */
+            is_real_concern?: string | null;
+            /** Assessed Priority */
+            assessed_priority?: string | null;
+            /** Should Fix */
+            should_fix?: string | null;
+            /** Practical Exploitability */
+            practical_exploitability?: string | null;
+            /**
+             * Notes
+             * @description The assessment's reasoning.
+             */
+            notes?: string | null;
+            /** Assessed At */
+            assessed_at?: string | null;
+        };
+        /**
          * PublicFindingEventResponse
          * @description Single finding lifecycle event.
          */
@@ -4556,6 +5058,18 @@ export interface components {
             status: string;
             /** File Path */
             file_path: string;
+            /**
+             * Line Start
+             * @description Start line of the most recent detection.
+             */
+            line_start?: number | null;
+            /** Line End */
+            line_end?: number | null;
+            /**
+             * Manifest Paths
+             * @description SBOM findings: manifest or lockfile paths the package was found in (file_path is its package URL).
+             */
+            manifest_paths?: string[];
             /** Message */
             message: string;
             /** Title */
@@ -4578,6 +5092,17 @@ export interface components {
             cvss_severity?: string | null;
             /** Cvss Vector */
             cvss_vector?: string | null;
+            /**
+             * Dismissed By
+             * @description ai or manual, for false_positive and ignored findings.
+             */
+            dismissed_by?: string | null;
+            /**
+             * Status Reason
+             * @description Reason given when the status was last set by hand.
+             */
+            status_reason?: string | null;
+            assessment?: components["schemas"]["PublicFindingAssessment"] | null;
             /**
              * First Detected At
              * Format: date-time
@@ -4608,6 +5133,11 @@ export interface components {
         PublicFindingStatusUpdateRequest: {
             /** @description One of open, resolved, ignored, false_positive, needs_manual_review */
             status: components["schemas"]["FindingStatus"];
+            /**
+             * Reason
+             * @description Why the status is being set. Required for resolved, ignored and false_positive when the organization requires a reason to close a finding.
+             */
+            reason?: string | null;
         };
         /**
          * PublicFixCreateRequest
@@ -4630,7 +5160,7 @@ export interface components {
              * @default github
              * @enum {string}
              */
-            source_repo_provider: "github" | "gitlab" | "azure_devops";
+            source_repo_provider: "github" | "gitlab" | "azure_devops" | "codecommit";
             /**
              * Source Scan Branch
              * @description Branch the finding was detected on
@@ -4883,6 +5413,11 @@ export interface components {
             prs: components["schemas"]["PublicQuotaCounter"];
             sast_scans: components["schemas"]["PublicQuotaCounter"];
             deep_ai_scans: components["schemas"]["PublicQuotaCounter"];
+            /** @description SAST scans of public repositories added with POST /repositories/public */
+            public_sast_scans: components["schemas"]["PublicQuotaCounter"];
+            /** @description Deep AI scans of public repositories added with POST /repositories/public */
+            public_deep_ai_scans: components["schemas"]["PublicQuotaCounter"];
+            /** @description The organization's own repositories; public repositories don't count */
             repositories: components["schemas"]["PublicRepositoryQuota"];
         };
         /**
@@ -4898,6 +5433,64 @@ export interface components {
             used: number;
             /** Remaining */
             remaining: number;
+        };
+        /**
+         * PublicRepositoryAddRequest
+         * @description Request body for ``POST /api/v1/repositories/public``.
+         */
+        PublicRepositoryAddRequest: {
+            /**
+             * Repository
+             * @description Public GitHub repository as owner/repo or a github.com URL
+             */
+            repository: string;
+            /**
+             * Branch
+             * @description Branch to scan; defaults to the default branch
+             */
+            branch?: string | null;
+        };
+        /**
+         * PublicRepositoryAddResponse
+         * @description The repository, ready to scan with ``POST /api/v1/repositories/{id}/scans``.
+         */
+        PublicRepositoryAddResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Repositories */
+            repositories?: components["schemas"]["PublicRepositoryRef"][];
+            /** Archived */
+            archived: boolean;
+            /**
+             * Public Repository
+             * @description A public repository added for scanning, rather than the organization's own code
+             * @default false
+             */
+            public_repository: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Created
+             * @description False when the repository had already been added
+             */
+            created: boolean;
+            /**
+             * App Url
+             * @description Where to see this repository's scans and findings in the web app
+             */
+            app_url: string;
         };
         /**
          * PublicRepositoryQuota
@@ -4942,6 +5535,12 @@ export interface components {
             repositories?: components["schemas"]["PublicRepositoryRef"][];
             /** Archived */
             archived: boolean;
+            /**
+             * Public Repository
+             * @description A public repository added for scanning, rather than the organization's own code
+             * @default false
+             */
+            public_repository: boolean;
             /**
              * Created At
              * Format: date-time
@@ -4988,6 +5587,11 @@ export interface components {
             started_at?: string | null;
             /** Completed At */
             completed_at?: string | null;
+            /**
+             * App Url
+             * @description The repository's scans in the web app; set when a scan is started.
+             */
+            app_url?: string | null;
         };
         /**
          * PublicScanCreateRequest
@@ -5059,12 +5663,32 @@ export interface components {
          * @description Lightweight finding summary used in ``GET /api/v1/scans/{id}/results``.
          */
         PublicScanFindingSummary: {
+            /** Id */
+            id: string;
             /** Check Id */
             check_id: string;
+            /** Title */
+            title?: string | null;
+            /** Category */
+            category?: string | null;
             /** File Path */
             file_path: string;
+            /** Line Start */
+            line_start?: number | null;
+            /** Line End */
+            line_end?: number | null;
+            /**
+             * Manifest Paths
+             * @description SBOM findings: where the package is declared.
+             */
+            manifest_paths?: string[];
             /** Severity */
             severity: string;
+            /**
+             * Status
+             * @description open or needs_manual_review still need attention; false_positive, ignored and resolved don't.
+             */
+            status: string;
             /** Message */
             message: string;
             /** Cwe */
@@ -5195,7 +5819,10 @@ export interface components {
             status: string;
             /** Status Reason */
             status_reason?: string | null;
-            /** Findings Count */
+            /**
+             * Findings Count
+             * @description Raw detections reported by the scanner, before de-duplication and AI assessment. The scan's results list the final findings.
+             */
             findings_count?: number | null;
             /** Started At */
             started_at?: string | null;
@@ -5300,8 +5927,34 @@ export interface components {
             scan_type: string;
             /** Status */
             status: string;
+            /**
+             * Assessment Complete
+             * @description False while the scan is still running or being assessed: findings may still be added and statuses (e.g. false_positive) are not final.
+             */
+            assessment_complete: boolean;
             /** Findings Count */
             findings_count: number;
+            /**
+             * Status Counts
+             * @description Findings per status.
+             */
+            status_counts?: {
+                [key: string]: number;
+            };
+            /**
+             * Severity Counts
+             * @description Findings per severity.
+             */
+            severity_counts?: {
+                [key: string]: number;
+            };
+            /**
+             * Actionable Severity Counts
+             * @description Findings per severity, counting only those that still need attention (open or needs_manual_review).
+             */
+            actionable_severity_counts?: {
+                [key: string]: number;
+            };
             /** Findings */
             findings: components["schemas"]["PublicScanFindingSummary"][];
         };
@@ -5378,6 +6031,36 @@ export interface components {
             used_deep_scans: number;
             /** Remaining Deep Scans */
             remaining_deep_scans: number;
+            /**
+             * Plan Public Sast Scans
+             * @default 0
+             */
+            plan_public_sast_scans: number;
+            /**
+             * Used Public Sast Scans
+             * @default 0
+             */
+            used_public_sast_scans: number;
+            /**
+             * Remaining Public Sast Scans
+             * @default 0
+             */
+            remaining_public_sast_scans: number;
+            /**
+             * Plan Public Deep Scans
+             * @default 0
+             */
+            plan_public_deep_scans: number;
+            /**
+             * Used Public Deep Scans
+             * @default 0
+             */
+            used_public_deep_scans: number;
+            /**
+             * Remaining Public Deep Scans
+             * @default 0
+             */
+            remaining_public_deep_scans: number;
             /** Max Applications */
             max_applications?: number | null;
             /**
@@ -5404,12 +6087,13 @@ export interface components {
         /** QuotaTopupResponse */
         QuotaTopupResponse: {
             /** Payment Url */
-            payment_url: string;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
+            payment_url?: string | null;
+            /** Checkout */
+            checkout?: {
+                [key: string]: unknown;
+            } | null;
+            /** Expires At */
+            expires_at?: string | null;
             /** Amount */
             amount: string;
         };
@@ -6078,7 +6762,7 @@ export interface components {
             /** Batches */
             batches: components["schemas"]["ScanBatchWithBreakdown"][];
             /** Queued Batches */
-            queued_batches: components["schemas"]["ScanBatch"][];
+            queued_batches: components["schemas"]["ScanBatchWithBreakdown"][];
             /** Total Scans */
             total_scans: number;
             /** Total Batches */
@@ -6266,6 +6950,18 @@ export interface components {
              * @description Distinct actionable findings surfaced by this batch (open + needs_manual_review)
              */
             actionable_findings_count?: number | null;
+            /**
+             * Severity Breakdown
+             * @description Actionable findings by severity (e.g., {'critical': 1, 'high': 0, 'medium': 3, 'low': 1})
+             */
+            severity_breakdown?: {
+                [key: string]: number;
+            } | null;
+            /**
+             * Branches
+             * @description Distinct branches this batch scanned, chosen per repository at scan creation
+             */
+            branches?: string[] | null;
         };
         /**
          * ScanBranchOverrideRequest
@@ -6276,7 +6972,7 @@ export interface components {
              * Provider
              * @enum {string}
              */
-            provider: "github" | "gitlab" | "azure_devops";
+            provider: "github" | "gitlab" | "azure_devops" | "codecommit";
             /** Repository Full Name */
             repository_full_name: string;
             /** Branch */
@@ -6448,6 +7144,16 @@ export interface components {
             total_lines?: number | null;
             /** File Count */
             file_count?: number | null;
+            /** Files In Scope */
+            files_in_scope?: number | null;
+            /** Files Assigned */
+            files_assigned?: number | null;
+            /** Files Scanned */
+            files_scanned?: number | null;
+            /** Files Unreadable */
+            files_unreadable?: number | null;
+            /** Chunks Empty */
+            chunks_empty?: number | null;
             /**
              * Updated At
              * Format: date-time
@@ -6890,6 +7596,13 @@ export interface components {
             next_billing_date: string;
             /** Cancelled At */
             cancelled_at?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /**
+             * Payment Past Due
+             * @default false
+             */
+            payment_past_due: boolean;
         };
         /**
          * SubscriptionStatus
@@ -8152,6 +8865,39 @@ export interface operations {
             };
         };
     };
+    add_public_repository_api_v1_repositories_public_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicRepositoryAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicRepositoryAddResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_repository_api_v1_repositories__repository_id__get: {
         parameters: {
             query?: never;
@@ -8409,6 +9155,8 @@ export interface operations {
                 status?: string | null;
                 /** @description Filter by scan type */
                 scan_type?: string | null;
+                /** @description Filter by category, e.g. dependency or license (SBOM), secrets, security */
+                category?: string | null;
                 limit?: number;
                 skip?: number;
             };

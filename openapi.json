@@ -13,7 +13,7 @@
           "public-api"
         ],
         "summary": "Get Public Api Me",
-        "description": "Return safe metadata for the authenticated API key connection.",
+        "description": "Return safe metadata for the authenticated API key (or OAuth) connection.",
         "operationId": "get_public_api_me_api_v1_me_get",
         "responses": {
           "200": {
@@ -82,6 +82,49 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicPaginatedResponse_PublicRepositoryResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/public": {
+      "post": {
+        "tags": [
+          "public-api",
+          "public-api"
+        ],
+        "summary": "Add Public Repository",
+        "description": "Add any public GitHub repository so it can be scanned. Idempotent per repository.\n\nScans of it use the organization's normal scan quota.",
+        "operationId": "add_public_repository_api_v1_repositories_public_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicRepositoryAddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRepositoryAddResponse"
                 }
               }
             }
@@ -735,6 +778,24 @@
             "description": "Filter by scan type"
           },
           {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category, e.g. dependency or license (SBOM), secrets, security",
+              "title": "Category"
+            },
+            "description": "Filter by category, e.g. dependency or license (SBOM), secrets, security"
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -840,7 +901,7 @@
           "public-api"
         ],
         "summary": "Update Finding Status",
-        "description": "Update the status of a finding (open / resolved / ignored / etc).",
+        "description": "Update the status of a finding (open / resolved / ignored / etc).\n\nOrganizations can require a ``reason`` to close a finding (resolved, ignored,\nfalse_positive); without one the request fails with ``FINDING_CLOSURE_REASON_REQUIRED``.",
         "operationId": "update_finding_status_api_v1_repositories__repository_id__findings__finding_id__patch",
         "parameters": [
           {
@@ -1873,10 +1934,11 @@
             "enum": [
               "github",
               "gitlab",
-              "azure_devops"
+              "azure_devops",
+              "codecommit"
             ],
             "title": "Provider",
-            "description": "Git provider (github, gitlab, or azure_devops)",
+            "description": "Git provider (github, gitlab, azure_devops, or codecommit)",
             "default": "github"
           },
           "provider_repository_id": {
@@ -2006,6 +2068,12 @@
             "type": "boolean",
             "title": "Archived",
             "description": "Whether the application is archived",
+            "default": false
+          },
+          "is_public_repo_scan": {
+            "type": "boolean",
+            "title": "Is Public Repo Scan",
+            "description": "A public repository added for scanning rather than the org's own code; not counted in its limit",
             "default": false
           },
           "repository_count": {
@@ -2706,12 +2774,38 @@
       "BundleTopupResponse": {
         "properties": {
           "payment_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Payment Url"
           },
+          "checkout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkout"
+          },
           "expires_at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expires At"
           },
           "amount": {
@@ -2729,8 +2823,6 @@
         },
         "type": "object",
         "required": [
-          "payment_url",
-          "expires_at",
           "amount",
           "bundle_contents"
         ],
@@ -2884,6 +2976,302 @@
         "type": "object",
         "title": "BusinessCalendarUpdateRequest",
         "description": "Request model for updating business calendar settings."
+      },
+      "CodeCommitBranchItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "commit_sha"
+        ],
+        "title": "CodeCommitBranchItem"
+      },
+      "CodeCommitConnectRequest": {
+        "properties": {
+          "aws_region": {
+            "type": "string",
+            "title": "Aws Region",
+            "description": "AWS region the repositories live in (e.g. eu-west-2)"
+          },
+          "auth_mode": {
+            "type": "string",
+            "enum": [
+              "access_keys",
+              "iam_role"
+            ],
+            "title": "Auth Mode",
+            "description": "Credential type"
+          },
+          "access_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Key Id",
+            "description": "IAM access key ID (access_keys mode)"
+          },
+          "secret_access_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Access Key",
+            "description": "IAM secret access key (access_keys mode)"
+          },
+          "role_arn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Arn",
+            "description": "IAM role ARN to assume (iam_role mode)"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id",
+            "description": "External ID shown by /role-setup (informational)"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label",
+            "description": "Optional nickname for this connection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aws_region",
+          "auth_mode"
+        ],
+        "title": "CodeCommitConnectRequest"
+      },
+      "CodeCommitConnectResponse": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/CodeCommitConnectionItem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connected",
+          "connection"
+        ],
+        "title": "CodeCommitConnectResponse"
+      },
+      "CodeCommitConnectionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "aws_account_id": {
+            "type": "string",
+            "title": "Aws Account Id"
+          },
+          "aws_region": {
+            "type": "string",
+            "title": "Aws Region"
+          },
+          "auth_mode": {
+            "type": "string",
+            "title": "Auth Mode"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "caller_arn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Arn"
+          },
+          "credentials_invalid": {
+            "type": "boolean",
+            "title": "Credentials Invalid",
+            "default": false
+          },
+          "connected_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          },
+          "connected_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "aws_account_id",
+          "aws_region",
+          "auth_mode"
+        ],
+        "title": "CodeCommitConnectionItem"
+      },
+      "CodeCommitRepoItem": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "const": "codecommit",
+            "title": "Provider",
+            "default": "codecommit"
+          },
+          "provider_repository_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Repository Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "default": true
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch"
+          },
+          "html_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "default_branch"
+        ],
+        "title": "CodeCommitRepoItem"
+      },
+      "CodeCommitRoleSetupResponse": {
+        "properties": {
+          "kolega_principal_arn": {
+            "type": "string",
+            "title": "Kolega Principal Arn"
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kolega_principal_arn",
+          "external_id"
+        ],
+        "title": "CodeCommitRoleSetupResponse"
+      },
+      "CodeCommitStatusResponse": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected",
+            "default": false
+          },
+          "connections": {
+            "items": {
+              "$ref": "#/components/schemas/CodeCommitConnectionItem"
+            },
+            "type": "array",
+            "title": "Connections"
+          }
+        },
+        "type": "object",
+        "title": "CodeCommitStatusResponse"
       },
       "CommitFilesRequest": {
         "properties": {
@@ -3901,6 +4289,26 @@
             "title": "File Path",
             "description": "Path to the file containing the finding"
           },
+          "manifest_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Manifest Paths",
+            "description": "Manifest or lockfile paths the package was found in (SBOM findings)"
+          },
+          "enclosing_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enclosing Symbol",
+            "description": "Enclosing function/class name used by v3 fingerprinting (empty when unknown)"
+          },
           "severity": {
             "$ref": "#/components/schemas/FindingSeverity",
             "description": "Severity level"
@@ -4000,6 +4408,17 @@
               }
             ],
             "description": "Source of dismissal if status is ignored/false_positive (ai or manual)"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reason the user gave for the current status, if any"
           },
           "first_detected_at": {
             "type": "string",
@@ -4801,6 +5220,77 @@
         "title": "FindingEventType",
         "description": "Types of finding audit events."
       },
+      "FindingEvidence": {
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id",
+            "description": "Finding this evidence belongs to"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization for access control and deletion"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id",
+            "description": "Application, so evidence is removed with it"
+          },
+          "scan_id": {
+            "type": "string",
+            "title": "Scan Id",
+            "description": "Scan the evidence was captured in"
+          },
+          "commit_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Hash",
+            "description": "Commit the code was read at"
+          },
+          "snippet": {
+            "$ref": "#/components/schemas/FindingSnippet"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "finding_id",
+          "organization_id",
+          "application_id",
+          "scan_id",
+          "snippet"
+        ],
+        "title": "FindingEvidence",
+        "description": "One document per finding; the latest scan that detected it wins."
+      },
+      "FindingEvidenceResponse": {
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "FindingEvidenceResponse",
+        "description": "Response for a finding's evidence; ``evidence`` is null when none was captured."
+      },
       "FindingFixSummary": {
         "properties": {
           "fix_id": {
@@ -5043,6 +5533,63 @@
         "title": "FindingSeverity",
         "description": "Severity level of a security finding."
       },
+      "FindingSnippet": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "description": "Path of the file the code comes from"
+          },
+          "line_start": {
+            "type": "integer",
+            "title": "Line Start",
+            "description": "First line the finding cites (1-based)"
+          },
+          "line_end": {
+            "type": "integer",
+            "title": "Line End",
+            "description": "Last line the finding cites"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "The cited lines plus a few lines of context either side"
+          },
+          "code_start_line": {
+            "type": "integer",
+            "title": "Code Start Line",
+            "description": "Line number of the first line in ``code``"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified",
+            "description": "True when the model's quoted code was found on the cited lines, False when it was found elsewhere or not at all, None when the model gave no quote to check"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "True when the code was cut to fit the size limits",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "line_start",
+          "line_end",
+          "code",
+          "code_start_line"
+        ],
+        "title": "FindingSnippet",
+        "description": "The file's own lines around a finding, as they were at the scanned commit."
+      },
       "FindingStatsResponse": {
         "properties": {
           "total": {
@@ -5081,10 +5628,54 @@
         "title": "FindingStatus",
         "description": "Status of a security finding."
       },
+      "FindingStatusReason": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason text supplied by the user"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FindingStatus",
+            "description": "Status the reason was given for"
+          },
+          "actor_user_id": {
+            "type": "string",
+            "title": "Actor User Id",
+            "description": "User ID (or API key actor) that set the status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason",
+          "status",
+          "actor_user_id"
+        ],
+        "title": "FindingStatusReason",
+        "description": "Reason a user gave when they set a finding's current status."
+      },
       "FindingStatusUpdateRequest": {
         "properties": {
           "status": {
             "$ref": "#/components/schemas/FindingStatus"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the status is being set. Required to close a finding when the organization demands it."
           }
         },
         "type": "object",
@@ -5179,6 +5770,26 @@
             "type": "string",
             "title": "File Path",
             "description": "Path to the file containing the finding"
+          },
+          "manifest_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Manifest Paths",
+            "description": "Manifest or lockfile paths the package was found in (SBOM findings)"
+          },
+          "enclosing_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enclosing Symbol",
+            "description": "Enclosing function/class name used by v3 fingerprinting (empty when unknown)"
           },
           "severity": {
             "$ref": "#/components/schemas/FindingSeverity",
@@ -5279,6 +5890,17 @@
               }
             ],
             "description": "Source of dismissal if status is ignored/false_positive (ai or manual)"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reason the user gave for the current status, if any"
           },
           "first_detected_at": {
             "type": "string",
@@ -5822,6 +6444,56 @@
         "title": "FindingsSeveritySummary",
         "description": "Counts of open findings broken down by severity for an application."
       },
+      "FixBoardLane": {
+        "properties": {
+          "lane": {
+            "$ref": "#/components/schemas/FixLane"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Total fixes in this lane"
+          },
+          "fixes": {
+            "items": {
+              "$ref": "#/components/schemas/FixResponse"
+            },
+            "type": "array",
+            "title": "Fixes",
+            "description": "Newest fixes in the lane"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lane",
+          "count"
+        ],
+        "title": "FixBoardLane",
+        "description": "One column of the Fixes board: its total plus the first page of fixes in it."
+      },
+      "FixBoardResponse": {
+        "properties": {
+          "lanes": {
+            "items": {
+              "$ref": "#/components/schemas/FixBoardLane"
+            },
+            "type": "array",
+            "title": "Lanes"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total unarchived fixes across all lanes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lanes",
+          "total"
+        ],
+        "title": "FixBoardResponse",
+        "description": "Response model for the repository Fixes board."
+      },
       "FixCreate": {
         "properties": {
           "application_id": {
@@ -5858,7 +6530,7 @@
           "source_repo_provider": {
             "type": "string",
             "title": "Source Repo Provider",
-            "description": "Provider of the repository (github/gitlab)",
+            "description": "Provider of the repository (github/gitlab/azure_devops/codecommit)",
             "default": "github"
           },
           "source_scan_branch": {
@@ -5884,6 +6556,18 @@
         "title": "FixCreate",
         "description": "Request model for creating a fix."
       },
+      "FixLane": {
+        "type": "string",
+        "enum": [
+          "in_progress",
+          "ready",
+          "pr_open",
+          "completed",
+          "needs_attention"
+        ],
+        "title": "FixLane",
+        "description": "Stage of the fix pipeline a fix currently sits in (the Fixes board columns).\n\nDerived from the fix status plus the state of its PRs rather than stored: lanes are\nmutually exclusive and every unarchived fix falls into exactly one of them."
+      },
       "FixListResponse": {
         "properties": {
           "fixes": {
@@ -5895,7 +6579,8 @@
           },
           "total": {
             "type": "integer",
-            "title": "Total"
+            "title": "Total",
+            "description": "Total fixes matching the filters (not just this page)"
           },
           "has_more": {
             "type": "boolean",
@@ -6120,7 +6805,7 @@
               }
             ],
             "title": "Source Repo Provider",
-            "description": "Provider of the repository (github/gitlab)"
+            "description": "Provider of the repository (github/gitlab/azure_devops/codecommit)"
           },
           "source_scan_branch": {
             "anyOf": [
@@ -6359,6 +7044,42 @@
             ],
             "title": "Application Name",
             "description": "Name of the target application"
+          },
+          "changed_file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed File Count",
+            "description": "Number of files touched by the generated diff (None when there is no diff yet)"
+          },
+          "lines_added": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lines Added",
+            "description": "Lines added by the generated diff"
+          },
+          "lines_removed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lines Removed",
+            "description": "Lines removed by the generated diff"
           }
         },
         "type": "object",
@@ -7794,7 +8515,7 @@
           "provider": {
             "type": "string",
             "title": "Provider",
-            "description": "LLM provider (anthropic, openai, google)"
+            "description": "LLM provider (deepseek, anthropic, openai, google)"
           },
           "model": {
             "type": "string",
@@ -8398,6 +9119,302 @@
         "title": "NotificationType",
         "description": "Enum for notification types."
       },
+      "OAuthClientRegistrationRequest": {
+        "properties": {
+          "redirect_uris": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Redirect Uris"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "client_uri": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Uri"
+          },
+          "token_endpoint_auth_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Endpoint Auth Method"
+          },
+          "grant_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Types"
+          },
+          "response_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Types"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          }
+        },
+        "type": "object",
+        "required": [
+          "redirect_uris"
+        ],
+        "title": "OAuthClientRegistrationRequest",
+        "description": "RFC 7591 §2 client metadata (the subset we honour)."
+      },
+      "OAuthConsentApproveRequest": {
+        "properties": {
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id",
+            "description": "Omit only when the consent view says will_create_organization"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Scopes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scopes"
+        ],
+        "title": "OAuthConsentApproveRequest"
+      },
+      "OAuthConsentDecisionResponse": {
+        "properties": {
+          "redirect_url": {
+            "type": "string",
+            "title": "Redirect Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "redirect_url"
+        ],
+        "title": "OAuthConsentDecisionResponse"
+      },
+      "OAuthConsentOrganization": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "organization_name": {
+            "type": "string",
+            "title": "Organization Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "allowed_scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "title": "Allowed Scopes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "organization_name",
+          "role",
+          "allowed_scopes"
+        ],
+        "title": "OAuthConsentOrganization"
+      },
+      "OAuthConsentView": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "client_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Uri"
+          },
+          "redirect_host": {
+            "type": "string",
+            "title": "Redirect Host"
+          },
+          "requested_scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "title": "Requested Scopes"
+          },
+          "organizations": {
+            "items": {
+              "$ref": "#/components/schemas/OAuthConsentOrganization"
+            },
+            "type": "array",
+            "title": "Organizations"
+          },
+          "will_create_organization": {
+            "type": "boolean",
+            "title": "Will Create Organization",
+            "description": "The user belongs to no organization yet; approving creates a free workspace for them",
+            "default": false
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "client_name",
+          "redirect_host",
+          "requested_scopes",
+          "organizations",
+          "expires_at"
+        ],
+        "title": "OAuthConsentView",
+        "description": "What the consent page needs to render. Never includes codes or tokens."
+      },
+      "OAuthGrantView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationApiKeyScope"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "client_id",
+          "client_name",
+          "user_id",
+          "scopes",
+          "created_at"
+        ],
+        "title": "OAuthGrantView",
+        "description": "A connected app as shown in organization settings."
+      },
       "OperationsEvidence": {
         "properties": {
           "mttr": {
@@ -8753,6 +9770,30 @@
             "title": "Quota Deep Scans Per Month",
             "description": "Deep scans per month"
           },
+          "quota_public_sast_scans_per_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Public Sast Scans Per Month",
+            "description": "Public-repo SAST scans per month"
+          },
+          "quota_public_deep_scans_per_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Public Deep Scans Per Month",
+            "description": "Public-repo deep scans per month"
+          },
           "max_repo_lines": {
             "anyOf": [
               {
@@ -8799,7 +9840,9 @@
         "enum": [
           "prs",
           "sast_scans",
-          "deep_scans"
+          "deep_scans",
+          "public_sast_scans",
+          "public_deep_scans"
         ],
         "title": "OrgQuotaType"
       },
@@ -9441,10 +10484,35 @@
             "description": "Whether this org is eligible for a free trial",
             "default": true
           },
+          "trial_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Started At",
+            "description": "When the free trial began; falls back to created_at when unset"
+          },
+          "setup_pending": {
+            "type": "boolean",
+            "title": "Setup Pending",
+            "description": "Auto-created (e.g. at MCP sign-up); onboarding not done yet and the trial has not begun",
+            "default": false
+          },
           "is_demo": {
             "type": "boolean",
             "title": "Is Demo",
             "description": "If True, this is a private per-user demo organization backed by demo fixture data",
+            "default": false
+          },
+          "require_finding_closure_reason": {
+            "type": "boolean",
+            "title": "Require Finding Closure Reason",
+            "description": "If True, closing a finding without a fix (resolved / ignored / false_positive) requires a reason",
             "default": false
           },
           "member_count": {
@@ -9501,6 +10569,18 @@
             ],
             "title": "Name",
             "description": "Organization display name"
+          },
+          "require_finding_closure_reason": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Require Finding Closure Reason",
+            "description": "Require a reason to close a finding without a fix. Owner only."
           }
         },
         "type": "object",
@@ -9971,6 +11051,89 @@
         "title": "PublicCreatePRRequest",
         "description": "Request body for ``POST /api/v1/fixes/{id}/pull-requests``."
       },
+      "PublicFindingAssessment": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "pending, in_progress, completed or failed."
+          },
+          "is_real_concern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Real Concern"
+          },
+          "assessed_priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessed Priority"
+          },
+          "should_fix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Should Fix"
+          },
+          "practical_exploitability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Practical Exploitability"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "The assessment's reasoning."
+          },
+          "assessed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "PublicFindingAssessment",
+        "description": "The AI assessment's verdict on a finding, including why it was dismissed."
+      },
       "PublicFindingEventResponse": {
         "properties": {
           "id": {
@@ -10136,6 +11299,37 @@
             "type": "string",
             "title": "File Path"
           },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start",
+            "description": "Start line of the most recent detection."
+          },
+          "line_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line End"
+          },
+          "manifest_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Manifest Paths",
+            "description": "SBOM findings: manifest or lockfile paths the package was found in (file_path is its package URL)."
+          },
           "message": {
             "type": "string",
             "title": "Message"
@@ -10224,6 +11418,40 @@
             ],
             "title": "Cvss Vector"
           },
+          "dismissed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed By",
+            "description": "ai or manual, for false_positive and ignored findings."
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason",
+            "description": "Reason given when the status was last set by hand."
+          },
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicFindingAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "first_detected_at": {
             "type": "string",
             "format": "date-time",
@@ -10281,6 +11509,19 @@
           "status": {
             "$ref": "#/components/schemas/FindingStatus",
             "description": "One of open, resolved, ignored, false_positive, needs_manual_review"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the status is being set. Required for resolved, ignored and false_positive when the organization requires a reason to close a finding."
           }
         },
         "type": "object",
@@ -10321,7 +11562,8 @@
             "enum": [
               "github",
               "gitlab",
-              "azure_devops"
+              "azure_devops",
+              "codecommit"
             ],
             "title": "Source Repo Provider",
             "default": "github"
@@ -10966,8 +12208,17 @@
           "deep_ai_scans": {
             "$ref": "#/components/schemas/PublicQuotaCounter"
           },
+          "public_sast_scans": {
+            "$ref": "#/components/schemas/PublicQuotaCounter",
+            "description": "SAST scans of public repositories added with POST /repositories/public"
+          },
+          "public_deep_ai_scans": {
+            "$ref": "#/components/schemas/PublicQuotaCounter",
+            "description": "Deep AI scans of public repositories added with POST /repositories/public"
+          },
           "repositories": {
-            "$ref": "#/components/schemas/PublicRepositoryQuota"
+            "$ref": "#/components/schemas/PublicRepositoryQuota",
+            "description": "The organization's own repositories; public repositories don't count"
           }
         },
         "type": "object",
@@ -10977,6 +12228,8 @@
           "prs",
           "sast_scans",
           "deep_ai_scans",
+          "public_sast_scans",
+          "public_deep_ai_scans",
           "repositories"
         ],
         "title": "PublicQuotaBalanceResponse",
@@ -11010,6 +12263,108 @@
         ],
         "title": "PublicQuotaCounter",
         "description": "Per-quota-type counters within the current billing period."
+      },
+      "PublicRepositoryAddRequest": {
+        "properties": {
+          "repository": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Repository",
+            "description": "Public GitHub repository as owner/repo or a github.com URL"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch",
+            "description": "Branch to scan; defaults to the default branch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repository"
+        ],
+        "title": "PublicRepositoryAddRequest",
+        "description": "Request body for ``POST /api/v1/repositories/public``."
+      },
+      "PublicRepositoryAddResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/PublicRepositoryRef"
+            },
+            "type": "array",
+            "title": "Repositories"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "public_repository": {
+            "type": "boolean",
+            "title": "Public Repository",
+            "description": "A public repository added for scanning, rather than the organization's own code",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created",
+            "description": "False when the repository had already been added"
+          },
+          "app_url": {
+            "type": "string",
+            "title": "App Url",
+            "description": "Where to see this repository's scans and findings in the web app"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "archived",
+          "created_at",
+          "updated_at",
+          "created",
+          "app_url"
+        ],
+        "title": "PublicRepositoryAddResponse",
+        "description": "The repository, ready to scan with ``POST /api/v1/repositories/{id}/scans``."
       },
       "PublicRepositoryQuota": {
         "properties": {
@@ -11102,6 +12457,12 @@
           "archived": {
             "type": "boolean",
             "title": "Archived"
+          },
+          "public_repository": {
+            "type": "boolean",
+            "title": "Public Repository",
+            "description": "A public repository added for scanning, rather than the organization's own code",
+            "default": false
           },
           "created_at": {
             "type": "string",
@@ -11202,6 +12563,18 @@
               }
             ],
             "title": "Completed At"
+          },
+          "app_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Url",
+            "description": "The repository's scans in the web app; set when a scan is started."
           }
         },
         "type": "object",
@@ -11331,17 +12704,78 @@
       },
       "PublicScanFindingSummary": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "check_id": {
             "type": "string",
             "title": "Check Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "file_path": {
             "type": "string",
             "title": "File Path"
           },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "line_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line End"
+          },
+          "manifest_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Manifest Paths",
+            "description": "SBOM findings: where the package is declared."
+          },
           "severity": {
             "type": "string",
             "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "open or needs_manual_review still need attention; false_positive, ignored and resolved don't."
           },
           "message": {
             "type": "string",
@@ -11368,9 +12802,11 @@
         },
         "type": "object",
         "required": [
+          "id",
           "check_id",
           "file_path",
           "severity",
+          "status",
           "message",
           "fingerprint"
         ],
@@ -11657,7 +13093,8 @@
                 "type": "null"
               }
             ],
-            "title": "Findings Count"
+            "title": "Findings Count",
+            "description": "Raw detections reported by the scanner, before de-duplication and AI assessment. The scan's results list the final findings."
           },
           "started_at": {
             "anyOf": [
@@ -11922,9 +13359,38 @@
             "type": "string",
             "title": "Status"
           },
+          "assessment_complete": {
+            "type": "boolean",
+            "title": "Assessment Complete",
+            "description": "False while the scan is still running or being assessed: findings may still be added and statuses (e.g. false_positive) are not final."
+          },
           "findings_count": {
             "type": "integer",
             "title": "Findings Count"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Status Counts",
+            "description": "Findings per status."
+          },
+          "severity_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Severity Counts",
+            "description": "Findings per severity."
+          },
+          "actionable_severity_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Actionable Severity Counts",
+            "description": "Findings per severity, counting only those that still need attention (open or needs_manual_review)."
           },
           "findings": {
             "items": {
@@ -11939,6 +13405,7 @@
           "batch_id",
           "scan_type",
           "status",
+          "assessment_complete",
           "findings_count",
           "findings"
         ],
@@ -12047,6 +13514,36 @@
             "type": "integer",
             "title": "Remaining Deep Scans"
           },
+          "plan_public_sast_scans": {
+            "type": "integer",
+            "title": "Plan Public Sast Scans",
+            "default": 0
+          },
+          "used_public_sast_scans": {
+            "type": "integer",
+            "title": "Used Public Sast Scans",
+            "default": 0
+          },
+          "remaining_public_sast_scans": {
+            "type": "integer",
+            "title": "Remaining Public Sast Scans",
+            "default": 0
+          },
+          "plan_public_deep_scans": {
+            "type": "integer",
+            "title": "Plan Public Deep Scans",
+            "default": 0
+          },
+          "used_public_deep_scans": {
+            "type": "integer",
+            "title": "Used Public Deep Scans",
+            "default": 0
+          },
+          "remaining_public_deep_scans": {
+            "type": "integer",
+            "title": "Remaining Public Deep Scans",
+            "default": 0
+          },
           "max_applications": {
             "anyOf": [
               {
@@ -12112,12 +13609,38 @@
       "QuotaTopupResponse": {
         "properties": {
           "payment_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Payment Url"
           },
+          "checkout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkout"
+          },
           "expires_at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expires At"
           },
           "amount": {
@@ -12128,8 +13651,6 @@
         },
         "type": "object",
         "required": [
-          "payment_url",
-          "expires_at",
           "amount"
         ],
         "title": "QuotaTopupResponse"
@@ -13280,7 +14801,7 @@
           },
           "queued_batches": {
             "items": {
-              "$ref": "#/components/schemas/ScanBatch"
+              "$ref": "#/components/schemas/ScanBatchWithBreakdown"
             },
             "type": "array",
             "title": "Queued Batches"
@@ -13639,6 +15160,36 @@
             ],
             "title": "Actionable Findings Count",
             "description": "Distinct actionable findings surfaced by this batch (open + needs_manual_review)"
+          },
+          "severity_breakdown": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Breakdown",
+            "description": "Actionable findings by severity (e.g., {'critical': 1, 'high': 0, 'medium': 3, 'low': 1})"
+          },
+          "branches": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branches",
+            "description": "Distinct branches this batch scanned, chosen per repository at scan creation"
           }
         },
         "type": "object",
@@ -13659,7 +15210,8 @@
             "enum": [
               "github",
               "gitlab",
-              "azure_devops"
+              "azure_devops",
+              "codecommit"
             ],
             "title": "Provider"
           },
@@ -14117,6 +15669,61 @@
               }
             ],
             "title": "File Count"
+          },
+          "files_in_scope": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files In Scope"
+          },
+          "files_assigned": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files Assigned"
+          },
+          "files_scanned": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files Scanned"
+          },
+          "files_unreadable": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files Unreadable"
+          },
+          "chunks_empty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunks Empty"
           },
           "updated_at": {
             "type": "string",
@@ -14921,6 +16528,22 @@
               }
             ],
             "title": "Cancelled At"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "payment_past_due": {
+            "type": "boolean",
+            "title": "Payment Past Due",
+            "default": false
           }
         },
         "type": "object",

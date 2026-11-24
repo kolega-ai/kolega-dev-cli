@@ -6,31 +6,11 @@ import type { components } from "./openapi-types.generated.js";
 
 type Schemas = components["schemas"];
 
-// `public_repository` and the add-public-repository endpoint are typed here until the
-// published OpenAPI schema includes them.
-export type Repository = Schemas["PublicRepositoryResponse"] & {
-  /** True for a public repository added for scanning rather than the organization's own code. */
-  public_repository?: boolean;
-};
+export type Repository = Schemas["PublicRepositoryResponse"];
 export type RepositoryRef = Schemas["PublicRepositoryRef"];
-export type RepositoryListResponse = Omit<
-  Schemas["PublicPaginatedResponse_PublicRepositoryResponse_"],
-  "items"
-> & { items: Repository[] };
-
-export interface PublicRepositoryAddRequest {
-  /** owner/repo or a github.com URL. */
-  repository: string;
-  /** Branch to scan; defaults to the repository's default branch. */
-  branch?: string;
-}
-
-export type PublicRepositoryAddResponse = Repository & {
-  /** False when the repository had already been added. */
-  created: boolean;
-  /** Web app page for this repository's scans and findings. */
-  app_url: string;
-};
+export type RepositoryListResponse = Schemas["PublicPaginatedResponse_PublicRepositoryResponse_"];
+export type PublicRepositoryAddRequest = Schemas["PublicRepositoryAddRequest"];
+export type PublicRepositoryAddResponse = Schemas["PublicRepositoryAddResponse"];
 
 export type Me = Schemas["PublicMeResponse"];
 
@@ -38,31 +18,12 @@ export type ScanBatch = Schemas["PublicScanBatchResponse"];
 export type ScanBatchListResponse = Schemas["PublicPaginatedResponse_PublicScanBatchResponse_"];
 export type ScanProgress = Schemas["PublicScanProgressResponse"];
 export type ScanProgressRepository = Schemas["PublicScanProgressRepository"];
-// Status fields typed locally so this builds against API specs that predate them.
-export type ScanFindingSummary = Schemas["PublicScanFindingSummary"] & {
-  id?: string;
-  title?: string | null;
-  status?: string;
-  category?: string | null;
-  line_start?: number | null;
-  line_end?: number | null;
-  manifest_paths?: string[];
-};
-export type ScanResults = Omit<Schemas["PublicScanResultsResponse"], "findings"> & {
-  assessment_complete?: boolean;
-  status_counts?: Record<string, number>;
-  severity_counts?: Record<string, number>;
-  actionable_severity_counts?: Record<string, number>;
-  findings: ScanFindingSummary[];
-};
+export type ScanFindingSummary = Schemas["PublicScanFindingSummary"];
+export type ScanResults = Schemas["PublicScanResultsResponse"];
 export type ScanCreateRequest = Schemas["PublicScanCreateRequest"];
 export type ScanType = Schemas["ScanType"];
 
-export type Finding = Schemas["PublicFindingResponse"] & {
-  line_start?: number | null;
-  line_end?: number | null;
-  manifest_paths?: string[];
-};
+export type Finding = Schemas["PublicFindingResponse"];
 export type FindingListResponse = Schemas["PublicPaginatedResponse_PublicFindingResponse_"];
 export type FindingStatusUpdateRequest = Schemas["PublicFindingStatusUpdateRequest"];
 export type FindingStatus = Schemas["FindingStatus"];
@@ -82,11 +43,7 @@ export type CreatePullRequestsRequest = Schemas["PublicCreatePRRequest"];
 export type CreatedPullRequestsResponse = Schemas["PublicPullRequestsCreatedResponse"];
 
 export type QuotaCounter = Schemas["PublicQuotaCounter"];
-/** Typed locally until the published schema has the public-repository counters. */
-export type QuotaBalance = Schemas["PublicQuotaBalanceResponse"] & {
-  public_sast_scans?: QuotaCounter;
-  public_deep_ai_scans?: QuotaCounter;
-};
+export type QuotaBalance = Schemas["PublicQuotaBalanceResponse"];
 export type RepositoryQuota = Schemas["PublicRepositoryQuota"];
 
 /**
