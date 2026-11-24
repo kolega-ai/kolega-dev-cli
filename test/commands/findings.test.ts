@@ -76,6 +76,64 @@ function exitThrows(): void {
   });
 }
 
+function listFindingsCommand(...args: string[]): Promise<Command> {
+  return makeProgram().parseAsync([
+    "node",
+    "kolega",
+    "--api-url",
+    BASE,
+    "--json",
+    "findings",
+    "list",
+    "repo-1",
+    ...args,
+  ]);
+}
+
+/** Answer the findings list GET and capture its query string. */
+function interceptFindingsList(): { query: () => URLSearchParams } {
+  let captured = new URLSearchParams();
+  mockAgent
+    .get(BASE)
+    .intercept({
+      path: (p) => p.startsWith("/api/v1/repositories/repo-1/findings?"),
+      method: "GET",
+    })
+    .reply((req) => {
+      captured = new URL(req.path, BASE).searchParams;
+      return {
+        statusCode: 200,
+        data: JSON.stringify({ items: [], total: 0, limit: 50, skip: 0 }),
+        responseOptions: { headers: { "content-type": "application/json" } },
+      };
+    });
+  return { query: () => captured };
+}
+
+describe("findings list", () => {
+  it("passes --category to the API", async () => {
+    const request = interceptFindingsList();
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await listFindingsCommand("--category", "license", "--severity", "high");
+
+    expect(request.query().get("category")).toBe("license");
+    expect(request.query().get("severity")).toBe("high");
+    mockAgent.assertNoPendingInterceptors();
+  });
+
+  it("sends no category filter when --category is omitted", async () => {
+    const request = interceptFindingsList();
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await listFindingsCommand();
+
+    expect(request.query().has("category")).toBe(false);
+    expect(request.query().get("limit")).toBe("50");
+    mockAgent.assertNoPendingInterceptors();
+  });
+});
+
 describe("findings set-status", () => {
   it("sends only the status when no reason is given", async () => {
     const request = interceptStatusUpdate();

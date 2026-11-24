@@ -28,6 +28,7 @@ interface ListOpts {
   status?: string;
   scanBatchId?: string;
   scanType?: string;
+  category?: string;
   limit?: string;
   skip?: string;
 }
@@ -54,6 +55,10 @@ export function registerFindingsCommands(program: Command, pkgVersion: string): 
     .option("--status <status>", "filter by status")
     .option("--scan-batch-id <id>", "filter by scan batch id")
     .option("--scan-type <type>", "filter by scan type")
+    .option(
+      "--category <category>",
+      "filter by category: dependency or license (SBOM), secrets, security",
+    )
     .option("--limit <n>", "page size", "50")
     .option("--skip <n>", "number of items to skip", "0")
     .action(async (repositoryId: string, opts: ListOpts, cmd) => {
@@ -66,6 +71,7 @@ export function registerFindingsCommands(program: Command, pkgVersion: string): 
           status: opts.status,
           scanBatchId: opts.scanBatchId,
           scanType: opts.scanType,
+          category: opts.category,
           limit: opts.limit ? Number(opts.limit) : undefined,
           skip: opts.skip ? Number(opts.skip) : undefined,
         });
