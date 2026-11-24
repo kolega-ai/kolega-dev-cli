@@ -1,5 +1,10 @@
 import type { ApiClient } from "./client.js";
-import type { Finding, FindingListResponse, FindingStatus } from "./types.js";
+import type {
+  Finding,
+  FindingListResponse,
+  FindingStatus,
+  FindingStatusUpdateRequest,
+} from "./types.js";
 
 const base = (repoId: string): string =>
   `/api/v1/repositories/${encodeURIComponent(repoId)}/findings`;
@@ -45,9 +50,7 @@ export async function setFindingStatus(
   status: FindingStatus,
   reason?: string,
 ): Promise<Finding> {
-  // Organizations can require a reason to close a finding (resolved, ignored,
-  // false_positive). Typed here rather than through the generated schema so the build
-  // does not depend on when the OpenAPI snapshot was last refreshed.
-  const body: { status: FindingStatus; reason?: string } = reason ? { status, reason } : { status };
+  // Organizations can require a reason to close a finding (resolved, ignored, false_positive).
+  const body: FindingStatusUpdateRequest = reason ? { status, reason } : { status };
   return client.patch<Finding>(`${base(repositoryId)}/${encodeURIComponent(findingId)}`, body);
 }
